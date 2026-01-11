@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: discovery-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+  banner:
+    location: classpath:config/banner.txt
+
+info:
+  app:
+    name: discovery-server-instance
+    description: Discovery Server
+  java:
+    version: ${java.version}
+
+logging:
+  config: classpath:config/logback-spring.xml

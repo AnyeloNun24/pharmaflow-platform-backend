@@ -1,0 +1,59 @@
+services:
+
+  eureka-1:
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
+    image: discovery-service:1.0.0
+    container_name: eureka-1
+    hostname: eureka-1
+    #ports:
+    #  - "8761:8761"
+    env_file:
+      - global.env
+      - ./discovery-service/discovery-service-1.env
+    networks:
+      - pharmaflow-net
+    volumes:
+      - pharmaflow-logs:/app/logs/discovery-service
+
+  eureka-2:
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
+    image: discovery-service:1.0.0
+    container_name: eureka-2
+    hostname: eureka-2
+    #ports:
+    #  - "8762:8762"
+    env_file:
+      - global.env
+      - discovery-service/discovery-service-2.env
+    networks:
+      - pharmaflow-net
+    volumes:
+      - pharmaflow-logs:/app/logs/discovery-service
+
+  eureka-3:
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
+    image: discovery-service:1.0.0
+    container_name: eureka-3
+    hostname: eureka-3
+    #ports:
+    #  - "8763:8763"
+    env_file:
+      - global.env
+      - discovery-service/discovery-service-3.env
+    networks:
+      - pharmaflow-net
+    volumes:
+      - pharmaflow-logs:/app/logs/discovery-service
+
+networks:
+  pharmaflow-net:
+    driver: bridge
+
+volumes:
+  pharmaflow-logs:
