@@ -1,0 +1,42 @@
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <springProperty name="APP_NAME" source="spring.application.name" defaultValue="application"/>
+    <property name="HOSTNAME" value="${EUREKA_INSTANCE_HOSTNAME:-localhost}"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>
+                %replace(%highlight([%-5level])){'\s',' '} [%d{yyyy-MM-dd HH:mm:ss.SSS}] [%cyan(%-36logger{36}:%line)] - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/${APP_NAME}/${APP_NAME}-${HOSTNAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/${APP_NAME}/${APP_NAME}-${HOSTNAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%-5level] [%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-36logger{36}:%line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Agregar mas dependiendo el modulo y sus dependencias -->
+    <logger name="com.pharmaflow" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="org.springframework.cloud.netflix.eureka">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <root>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

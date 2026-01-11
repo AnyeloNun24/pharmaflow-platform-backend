@@ -1,0 +1,38 @@
+server:
+  port: ${SERVER_PORT:8761}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${EUREKA_INSTANCE_HOSTNAME:localhost}):${server.port}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  server:
+    registry-sync-retries: 3
+    enable-self-preservation: false
+  dashboard:
+    path: /dashboard
+  environment: local
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: DEBUG
+    com.netflix.eureka: DEBUG
+    com.pharmaflow: DEBUG

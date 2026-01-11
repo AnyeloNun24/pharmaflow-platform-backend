@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${EUREKA_INSTANCE_HOSTNAME}):${server.port}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+  server:
+    registry-sync-retries: 3
+    enable-self-preservation: false
+  dashboard:
+    path: /dashboard
+  environment: qa
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  info:
+    env:
+      enabled: false
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
