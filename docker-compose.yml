@@ -15,7 +15,7 @@ services:
     networks:
       - pharmaflow-net
     volumes:
-      - pharmaflow-logs:/app/logs/discovery-service
+      - pharmaflow-discovery-service-logs:/app/logs/discovery-service
 
   eureka-2:
     build:
@@ -32,7 +32,7 @@ services:
     networks:
       - pharmaflow-net
     volumes:
-      - pharmaflow-logs:/app/logs/discovery-service
+      - pharmaflow-discovery-service-logs:/app/logs/discovery-service
 
   eureka-3:
     build:
@@ -49,11 +49,46 @@ services:
     networks:
       - pharmaflow-net
     volumes:
-      - pharmaflow-logs:/app/logs/discovery-service
+      - pharmaflow-discovery-service-logs:/app/logs/discovery-service
+
+  gateway-1:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: api-gateway:1.0.0
+    container_name: gateway-1
+    hostname: gateway-1
+    ports:
+      - "8091:8091"
+    env_file:
+      - global.env
+      - ./api-gateway/api-gateway-1.env
+    networks:
+      - pharmaflow-net
+    volumes:
+      - pharmaflow-api-gateway-logs:/app/logs/api-gateway
+
+  gateway-2:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: api-gateway:1.0.0
+    container_name: gateway-2
+    hostname: gateway-2
+    ports:
+      - "8092:8092"
+    env_file:
+      - global.env
+      - ./api-gateway/api-gateway-2.env
+    networks:
+      - pharmaflow-net
+    volumes:
+      - pharmaflow-api-gateway-logs:/app/logs/api-gateway
 
 networks:
   pharmaflow-net:
     driver: bridge
 
 volumes:
-  pharmaflow-logs:
+  pharmaflow-discovery-service-logs:
+  pharmaflow-api-gateway-logs:

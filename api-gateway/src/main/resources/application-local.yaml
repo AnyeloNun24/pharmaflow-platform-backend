@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:8090}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME:localhost}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME:localhost}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL:http://localhost:8761/eureka}
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: INFO
+    com.netflix.eureka: INFO
+    org.springframework.cloud.gateway.server: DEBUG
+    com.pharmaflow: DEBUG
