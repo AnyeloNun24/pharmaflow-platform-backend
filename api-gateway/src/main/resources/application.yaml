@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: api-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+  banner:
+    location: classpath:config/banner.txt
+
+info:
+  app:
+    name: api-gateway-instance
+    description: Api Gateway
+  java:
+    version: ${java.version}
+
+logging:
+  config: classpath:config/logback-spring.xml

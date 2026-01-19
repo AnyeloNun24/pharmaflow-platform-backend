@@ -6,15 +6,19 @@ eureka:
     instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME}):${server.port}
     hostname: ${INSTANCE_HOSTNAME}
   client:
+    register-with-eureka: true
+    fetch-registry: true
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
-  server:
-    registry-sync-retries: 3
-    enable-self-preservation: true
-  dashboard:
-    path: /dashboard
-    enabled: false
-  environment: prod
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL}
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
 
 management:
   server:
@@ -36,6 +40,7 @@ management:
 logging:
   level:
     root: INFO
-    org.springframework.cloud.netflix.eureka: INFO
-    com.netflix.eureka: INFO
+    org.springframework.cloud.netflix.eureka: WARN
+    com.netflix.eureka: WARN
+    org.springframework.cloud.gateway.server: INFO
     com.pharmaflow: INFO

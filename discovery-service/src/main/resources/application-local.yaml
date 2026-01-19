@@ -3,8 +3,8 @@ server:
 
 eureka:
   instance:
-    instance-id: ${spring.application.name}(${EUREKA_INSTANCE_HOSTNAME:localhost}):${server.port}
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME:localhost}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME:localhost}
   client:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
