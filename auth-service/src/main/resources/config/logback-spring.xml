@@ -7,7 +7,7 @@
         <target>System.out</target>
         <encoder>
             <pattern>
-                %replace(%highlight([%-5level])){'\s',' '} [%d{yyyy-MM-dd HH:mm:ss.SSS}] [%cyan(%-36logger{36}:%line)] - %msg%n
+                %replace(%highlight([%-5level])){'\s',' '} [%d{yyyy-MM-dd HH:mm:ss.SSS}] [rid:%X{requestId:-}] [%cyan(%-36logger{36}:%line)] - %msg%n
             </pattern>
         </encoder>
     </appender>
@@ -19,7 +19,7 @@
             <maxHistory>30</maxHistory>
         </rollingPolicy>
         <encoder>
-            <pattern>[%-5level] [%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-36logger{36}:%line] - %msg%n</pattern>
+            <pattern>[%-5level] [%d{yyyy-MM-dd HH:mm:ss.SSS}] [rid:%X{requestId:-}] [%-36logger{36}:%line] - %msg%n</pattern>
         </encoder>
     </appender>
 

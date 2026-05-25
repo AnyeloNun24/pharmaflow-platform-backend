@@ -15,6 +15,8 @@ public interface RefreshTokenService {
 
     void revoke(String rawToken);
 
+    AuthUserEntity revokeAndReturnUser(String rawToken);
+
     void revokeFamily(UUID family);
 
     void revokeAllForUser(Long idUser);

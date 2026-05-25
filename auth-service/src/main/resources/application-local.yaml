@@ -40,6 +40,8 @@ security:
   password-token:
     set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES:1440}
     reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:60}
+  policy:
+    max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS:5}
 
 eureka:
   instance:

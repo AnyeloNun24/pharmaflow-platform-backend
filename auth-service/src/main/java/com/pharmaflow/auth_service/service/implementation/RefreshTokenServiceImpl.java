@@ -4,6 +4,7 @@ import com.pharmaflow.auth_service.config.properties.JwtProperties;
 import com.pharmaflow.auth_service.persistence.entity.AuthUserEntity;
 import com.pharmaflow.auth_service.persistence.entity.RefreshTokenEntity;
 import com.pharmaflow.auth_service.persistence.repository.RefreshTokenRepository;
+import com.pharmaflow.auth_service.service.interfaces.AuditLogService;
 import com.pharmaflow.auth_service.service.interfaces.RefreshTokenService;
 import com.pharmaflow.auth_service.util.TokenHasherUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenHasherUtils tokenHasherUtils;
     private final JwtProperties jwtProperties;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -47,6 +49,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
         if (Boolean.TRUE.equals(entity.getRevoked())) {
             log.warn("Reuso detectado del refresh token (family={}). Revocando familia.", entity.getTokenFamily());
+            this.auditLogService.recordFailure(
+                    AuditLogService.ActionType.REFRESH_TOKEN_REUSE,
+                    entity.getUser(),
+                    "Reuso de refresh token detectado, familia " + entity.getTokenFamily() + " revocada",
+                    "Refresh token revocado reutilizado");
             this.revokeFamily(entity.getTokenFamily());
             throw new BadCredentialsException("Refresh token revocado");
         }
@@ -76,15 +83,24 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public void revoke(String rawToken) {
-        if (rawToken == null || rawToken.isBlank()) return;
+        this.revokeAndReturnUser(rawToken);
+    }
+
+    @Override
+    @Transactional
+    public AuthUserEntity revokeAndReturnUser(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) return null;
         String hash = this.tokenHasherUtils.sha256Hex(rawToken);
-        this.refreshTokenRepository.findByTokenHash(hash).ifPresent(entity -> {
-            if (Boolean.FALSE.equals(entity.getRevoked())) {
-                entity.setRevoked(true);
-                entity.setRevokedAt(OffsetDateTime.now());
-                this.refreshTokenRepository.save(entity);
-            }
-        });
+        return this.refreshTokenRepository.findByTokenHash(hash)
+                .map(entity -> {
+                    if (Boolean.FALSE.equals(entity.getRevoked())) {
+                        entity.setRevoked(true);
+                        entity.setRevokedAt(OffsetDateTime.now());
+                        this.refreshTokenRepository.save(entity);
+                    }
+                    return entity.getUser();
+                })
+                .orElse(null);
     }
 
     @Override

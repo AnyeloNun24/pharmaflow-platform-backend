@@ -5,6 +5,7 @@ import com.pharmaflow.auth_service.persistence.entity.AuthUserEntity;
 import com.pharmaflow.auth_service.persistence.entity.PasswordTokenEntity;
 import com.pharmaflow.auth_service.persistence.repository.AuthUserRepository;
 import com.pharmaflow.auth_service.persistence.repository.PasswordTokenRepository;
+import com.pharmaflow.auth_service.service.interfaces.AuditLogService;
 import com.pharmaflow.auth_service.service.interfaces.PasswordTokenService;
 import com.pharmaflow.auth_service.service.interfaces.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
@@ -28,17 +29,18 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordTokenProperties properties;
     private final RefreshTokenService refreshTokenService;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
     public String issueSetPasswordToken(AuthUserEntity user) {
-        return this.issue(user, PasswordTokenEntity.TYPE_SET_PASSWORD, this.properties.setTtlMinutes());
+        return this.issue(user, PasswordTokenEntity.TYPE_SET_PASSWORD, this.properties.resolvedSetTtlMinutes());
     }
 
     @Override
     @Transactional
     public String issueResetPasswordToken(AuthUserEntity user) {
-        return this.issue(user, PasswordTokenEntity.TYPE_RESET_PASSWORD, this.properties.resetTtlMinutes());
+        return this.issue(user, PasswordTokenEntity.TYPE_RESET_PASSWORD, this.properties.resolvedResetTtlMinutes());
     }
 
     @Override
@@ -78,6 +80,12 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
         this.passwordTokenRepository.save(entity);
 
         this.refreshTokenService.revokeAllForUser(user.getIdUser());
+
+        AuditLogService.ActionType action = PasswordTokenEntity.TYPE_SET_PASSWORD.equals(entity.getType())
+                ? AuditLogService.ActionType.SET_PASSWORD
+                : AuditLogService.ActionType.PASSWORD_CHANGED;
+        this.auditLogService.recordSuccess(action, user,
+                "Password actualizada via token tipo " + entity.getType());
 
         log.info("Password actualizada para usuario id={} (token type={})", user.getIdUser(), entity.getType());
     }

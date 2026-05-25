@@ -7,11 +7,11 @@ public record PasswordTokenProperties(
         Integer setTtlMinutes,
         Integer resetTtlMinutes
 ) {
-    public Integer setTtlMinutes() {
+    public int resolvedSetTtlMinutes() {
         return setTtlMinutes != null ? setTtlMinutes : 1440;
     }
 
-    public Integer resetTtlMinutes() {
+    public int resolvedResetTtlMinutes() {
         return resetTtlMinutes != null ? resetTtlMinutes : 60;
     }
 }

@@ -662,7 +662,7 @@ CREATE TABLE iam.auth_audit_log (
     success         BOOLEAN         NOT NULL,
     ip_address      INET            NOT NULL,
     user_agent      VARCHAR(255)    NULL,
-    failure_reason  VARCHAR(255)    NOT NULL,
+    failure_reason  VARCHAR(255)    NULL,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Primary Key
