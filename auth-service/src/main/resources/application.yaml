@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: auth-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+  banner:
+    location: classpath:config/banner.txt
+
+info:
+  app:
+    name: auth-service-instance
+    description: Auth Service
+  java:
+    version: ${java.version}
+
+logging:
+  config: classpath:config/logback-spring.xml

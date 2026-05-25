@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL}
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: health,info.metrics,loggers
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: INFO
+    com.netflix.eureka: INFO
+    org.springframework.security: DEBUG
+    com.pharmaflow: DEBUG
