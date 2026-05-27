@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Table(
         name = "password_token",
@@ -44,18 +44,18 @@ public class PasswordTokenEntity implements Serializable {
     private Boolean used = false;
 
     @Column(name = "used_at")
-    private OffsetDateTime usedAt;
+    private Instant usedAt;
 
     @Column(name = "expiry_at", nullable = false)
-    private OffsetDateTime expiryAt;
+    private Instant expiryAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @PrePersist
     protected void onCreate() {
         if (this.createdAt == null) {
-            this.createdAt = OffsetDateTime.now();
+            this.createdAt = Instant.now();
         }
     }
 }

@@ -4,7 +4,7 @@ import com.pharmaflow.auth_service.persistence.entity.embeddable_id.RolePermissi
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Table(
         name = "auth_role_permission",
@@ -36,12 +36,12 @@ public class AuthRolePermissionEntity {
     private AuthUserEntity grantedBy;
 
     @Column(name = "granted_at", nullable = false, updatable = false)
-    private OffsetDateTime grantedAt;
+    private Instant grantedAt;
 
     @PrePersist
     protected void onCreate() {
         if (this.grantedAt == null) {
-            this.grantedAt = OffsetDateTime.now();
+            this.grantedAt = Instant.now();
         }
     }
 

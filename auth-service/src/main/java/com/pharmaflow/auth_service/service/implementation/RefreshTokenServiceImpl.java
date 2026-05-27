@@ -13,7 +13,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
@@ -45,7 +45,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         RefreshTokenEntity entity = this.refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new BadCredentialsException("Refresh token invalido"));
 
-        OffsetDateTime now = OffsetDateTime.now();
+        Instant now = Instant.now();
 
         if (Boolean.TRUE.equals(entity.getRevoked())) {
             log.warn("Reuso detectado del refresh token (family={}). Revocando familia.", entity.getTokenFamily());
@@ -71,7 +71,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
         IssuedToken next = this.persist(current.getUser(), current.getTokenFamily(), ipAddress, userAgent);
 
-        OffsetDateTime now = OffsetDateTime.now();
+        Instant now = Instant.now();
         current.setRevoked(true);
         current.setRevokedAt(now);
         current.setReplacedByHash(next.entity().getTokenHash());
@@ -95,7 +95,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                 .map(entity -> {
                     if (Boolean.FALSE.equals(entity.getRevoked())) {
                         entity.setRevoked(true);
-                        entity.setRevokedAt(OffsetDateTime.now());
+                        entity.setRevokedAt(Instant.now());
                         this.refreshTokenRepository.save(entity);
                     }
                     return entity.getUser();
@@ -106,14 +106,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public void revokeFamily(UUID family) {
-        int updated = this.refreshTokenRepository.revokeAllByFamily(family, OffsetDateTime.now());
+        int updated = this.refreshTokenRepository.revokeAllByFamily(family, Instant.now());
         log.info("Revocados {} tokens de la familia {}", updated, family);
     }
 
     @Override
     @Transactional
     public void revokeAllForUser(Long idUser) {
-        int updated = this.refreshTokenRepository.revokeAllByUser(idUser, OffsetDateTime.now());
+        int updated = this.refreshTokenRepository.revokeAllByUser(idUser, Instant.now());
         log.info("Revocados {} tokens del usuario {}", updated, idUser);
     }
 
@@ -122,7 +122,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         String raw = this.tokenHasherUtils.generateRawToken();
         String hash = this.tokenHasherUtils.sha256Hex(raw);
 
-        OffsetDateTime expiryAt = OffsetDateTime.now().plusDays(this.jwtProperties.refreshTtlDays());
+        Instant expiryAt = Instant.now().plus(this.jwtProperties.refreshTtlDays(), ChronoUnit.DAYS);
 
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .user(user)

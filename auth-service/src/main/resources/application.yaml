@@ -10,6 +10,7 @@ info:
   app:
     name: auth-service-instance
     description: Auth Service
+    timezone: ${TZ:UTC}
   java:
     version: ${java.version}
 

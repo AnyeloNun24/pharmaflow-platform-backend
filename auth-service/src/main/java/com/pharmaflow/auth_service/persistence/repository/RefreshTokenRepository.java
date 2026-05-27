@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,7 +24,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
             WHERE rt.tokenFamily = :family
               AND rt.revoked = FALSE
            """)
-    int revokeAllByFamily(@Param("family") UUID family, @Param("now") OffsetDateTime now);
+    int revokeAllByFamily(@Param("family") UUID family, @Param("now") Instant now);
 
     @Modifying
     @Query("""
@@ -34,5 +34,5 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
             WHERE rt.user.idUser = :idUser
               AND rt.revoked = FALSE
            """)
-    int revokeAllByUser(@Param("idUser") Long idUser, @Param("now") OffsetDateTime now);
+    int revokeAllByUser(@Param("idUser") Long idUser, @Param("now") Instant now);
 }

@@ -1,6 +1,49 @@
 server:
   port: ${SERVER_PORT}
 
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: AuthHikariPool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:15}
+      minimum-idle: ${DB_POOL_MIN_IDLE:3}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:30000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      connection-init-sql: "SET TIME ZONE '${TZ:UTC}'"
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: iam
+        format_sql: false
+        jdbc:
+          time_zone: ${TZ:UTC}
+  flyway:
+    enabled: true
+    default-schema: iam
+    schemas: iam
+    locations: classpath:db/migration
+
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS}
+    hmac-secret: ${JWT_HMAC_SECRET}
+  password-token:
+    set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES}
+    reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES}
+  policy:
+    max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS}
+
 eureka:
   instance:
     instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME}):${server.port}
@@ -31,5 +74,5 @@ logging:
     root: INFO
     org.springframework.cloud.netflix.eureka: INFO
     com.netflix.eureka: INFO
-    org.springframework.security: DEBUG
-    com.pharmaflow: DEBUG
+    org.springframework.security: INFO
+    com.pharmaflow: INFO

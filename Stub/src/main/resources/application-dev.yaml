@@ -1,9 +1,0 @@
-eureka:
-  instance:
-    instance-id: ${spring.application.name}:${server.port}
-    hostname: ${spring.application.name}
-  client:
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL}

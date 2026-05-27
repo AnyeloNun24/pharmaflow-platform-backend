@@ -15,7 +15,6 @@
 	<modules>
 		<module>discovery-service</module>
 		<module>api-gateway</module>
-		<module>Stub</module> <!-- Modulo de prueba para API GATEWAY-->
 		<module>auth-service</module>
 	</modules>
 

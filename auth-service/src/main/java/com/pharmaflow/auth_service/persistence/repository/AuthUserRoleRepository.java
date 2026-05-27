@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 @Repository
@@ -23,6 +23,6 @@ public interface AuthUserRoleRepository extends ReadOnlyRepository<AuthUserRoleE
              AND (ur.expiresAt IS NULL OR ur.expiresAt > :now)
            """)
     Set<AuthUserRoleEntity> findActiveRolesByUserId(@Param("idUser") Long idUser,
-                                                    @Param("now") OffsetDateTime now);
+                                                    @Param("now") Instant now);
 
 }

@@ -11,7 +11,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 @Component
@@ -31,7 +31,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         Map<String, Object> body = Map.of(
-                "timestamp", OffsetDateTime.now().toString(),
+                "timestamp", Instant.now().toString(),
                 "status", HttpStatus.UNAUTHORIZED.value(),
                 "error", "Unauthorized",
                 "message", "Autenticacion requerida",

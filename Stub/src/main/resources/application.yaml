@@ -1,6 +1,0 @@
-spring:
-  application:
-    name: stub-service
-
-server:
-  port: 8091

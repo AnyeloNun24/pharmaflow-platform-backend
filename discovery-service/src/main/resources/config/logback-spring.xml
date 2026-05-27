@@ -1,7 +1,11 @@
 <configuration scan="true" scanPeriod="30 seconds">
 
     <springProperty name="APP_NAME" source="spring.application.name" defaultValue="application"/>
+    <springProperty name="PROFILE" source="spring.profiles.active" defaultValue="default"/>
     <property name="HOSTNAME" value="${INSTANCE_HOSTNAME:-localhost}"/>
+
+    <property name="LOG_DIR" value="logs/${APP_NAME}/${HOSTNAME}"/>
+    <property name="LOG_FILE" value="${APP_NAME}__${HOSTNAME}__${PROFILE}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.out</target>
@@ -13,9 +17,9 @@
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/${APP_NAME}/${HOSTNAME}/${APP_NAME}-${HOSTNAME}.log</file>
+        <file>${LOG_DIR}/${LOG_FILE}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/${APP_NAME}/${HOSTNAME}/${APP_NAME}-${HOSTNAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
         </rollingPolicy>
         <encoder>

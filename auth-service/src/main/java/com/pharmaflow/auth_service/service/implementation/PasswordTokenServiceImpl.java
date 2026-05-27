@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
@@ -54,7 +54,7 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
         PasswordTokenEntity entity = this.passwordTokenRepository.findByToken(token)
                 .orElseThrow(() -> new BadCredentialsException("Token invalido"));
 
-        OffsetDateTime now = OffsetDateTime.now();
+        Instant now = Instant.now();
 
         if (Boolean.TRUE.equals(entity.getUsed())) {
             throw new BadCredentialsException("Token ya consumido");
@@ -92,7 +92,7 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
 
     private String issue(AuthUserEntity user, String type, int ttlMinutes) {
 
-        this.passwordTokenRepository.invalidatePreviousTokens(user.getIdUser(), type, OffsetDateTime.now());
+        this.passwordTokenRepository.invalidatePreviousTokens(user.getIdUser(), type, Instant.now());
 
         String token = UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "");
@@ -101,7 +101,7 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
                 .user(user)
                 .token(token)
                 .type(type)
-                .expiryAt(OffsetDateTime.now().plusMinutes(ttlMinutes))
+                .expiryAt(Instant.now().plus(ttlMinutes, ChronoUnit.MINUTES))
                 .build();
 
         this.passwordTokenRepository.save(entity);

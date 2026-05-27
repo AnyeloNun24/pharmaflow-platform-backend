@@ -4,7 +4,7 @@ import com.pharmaflow.auth_service.persistence.entity.embeddable_id.UserRoleId;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Table(
         name = "auth_user_role",
@@ -36,26 +36,26 @@ public class AuthUserRoleEntity {
     private Boolean active = true;
 
     @Column(name = "expires_at")
-    private OffsetDateTime expiresAt;
+    private Instant expiresAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by")
     private AuthUserEntity assignedBy;
 
     @Column(name = "assigned_at", nullable = false, updatable = false)
-    private OffsetDateTime assignedAt;
+    private Instant assignedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "revoked_by")
     private AuthUserEntity revokedBy;
 
     @Column(name = "revoked_at")
-    private OffsetDateTime revokedAt;
+    private Instant revokedAt;
 
     @PrePersist
     protected void onCreate() {
         if (this.assignedAt == null) {
-            this.assignedAt = OffsetDateTime.now();
+            this.assignedAt = Instant.now();
         }
     }
 }

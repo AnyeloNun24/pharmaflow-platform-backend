@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -79,7 +79,7 @@ public class GlobalExceptionHandler {
 
     private Map<String, Object> baseBody(HttpStatus status, String message, WebRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", OffsetDateTime.now().toString());
+        body.put("timestamp", Instant.now().toString());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);

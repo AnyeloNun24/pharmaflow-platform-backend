@@ -16,7 +16,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,7 +40,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
         Set<AuthRoleEntity> activeRoles = this.authUserRoleRepository
-                .findActiveRolesByUserId(user.getIdUser(), OffsetDateTime.now())
+                .findActiveRolesByUserId(user.getIdUser(), Instant.now())
                 .stream()
                 .map(AuthUserRoleEntity::getRole)
                 .collect(Collectors.toSet());

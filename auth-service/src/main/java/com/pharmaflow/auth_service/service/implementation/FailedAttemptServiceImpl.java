@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -27,7 +27,7 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
     public void onLoginSuccess(String email) {
         this.authUserRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
             user.setFailedAttempts((short) 0);
-            user.setLastLoginAt(OffsetDateTime.now());
+            user.setLastLoginAt(Instant.now());
             this.authUserRepository.save(user);
         });
     }
@@ -45,7 +45,7 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
             int max = this.policyProperties.resolvedMaxFailedAttempts();
             if (next >= max) {
                 user.setAccountLocked(true);
-                user.setLockedAt(OffsetDateTime.now());
+                user.setLockedAt(Instant.now());
                 log.warn("Cuenta bloqueada por superar el limite de intentos fallidos: id={}, attempts={}",
                         user.getIdUser(), next);
                 this.authUserRepository.save(user);

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -26,5 +26,5 @@ public interface PasswordTokenRepository extends JpaRepository<PasswordTokenEnti
            """)
     int invalidatePreviousTokens(@Param("idUser") Long idUser,
                                  @Param("type") String type,
-                                 @Param("now") OffsetDateTime now);
+                                 @Param("now") Instant now);
 }
