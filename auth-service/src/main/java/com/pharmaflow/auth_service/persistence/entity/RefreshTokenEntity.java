@@ -52,6 +52,9 @@ public class RefreshTokenEntity implements Serializable {
     @Column(name = "expiry_at", nullable = false)
     private Instant expiryAt;
 
+    @Column(name = "absolute_expiry_at", nullable = false, updatable = false)
+    private Instant absoluteExpiryAt;
+
     @Column(name = "revoked", nullable = false)
     @Builder.Default
     private Boolean revoked = false;

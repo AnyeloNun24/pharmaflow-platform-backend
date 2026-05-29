@@ -8,8 +8,8 @@ services:
     container_name: eureka-1
     hostname: eureka-1
     restart: unless-stopped
-    #ports:
-    #  - "8761:8761"
+    ports:
+      - "8761:8761"
     env_file:
       - global.env
       - ./discovery-service/discovery-service-1.env

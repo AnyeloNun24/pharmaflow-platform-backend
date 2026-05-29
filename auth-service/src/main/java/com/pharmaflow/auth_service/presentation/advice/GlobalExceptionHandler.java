@@ -1,5 +1,6 @@
 package com.pharmaflow.auth_service.presentation.advice;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAuthentication(AuthenticationException ex, WebRequest request) {
         log.warn("Fallo de autenticacion: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "Fallo de autenticacion", request);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex, WebRequest request) {
+        log.warn("Recurso no encontrado: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

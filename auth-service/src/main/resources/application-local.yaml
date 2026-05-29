@@ -36,13 +36,15 @@ security:
   jwt:
     issuer: ${JWT_ISSUER:pharmaflow-auth}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
-    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:1}
+    refresh-absolute-ttl-days: ${JWT_REFRESH_ABSOLUTE_TTL_DAYS:30}
     hmac-secret: ${JWT_HMAC_SECRET:a3f8c2d1e4b7f9a0c6d2e8f1b4a7c3d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1a4b7}
   password-token:
     set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES:1440}
     reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:60}
   policy:
     max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS:5}
+    lockout-duration-minutes: ${SECURITY_LOCKOUT_DURATION_MINUTES:15}
 
 eureka:
   instance:

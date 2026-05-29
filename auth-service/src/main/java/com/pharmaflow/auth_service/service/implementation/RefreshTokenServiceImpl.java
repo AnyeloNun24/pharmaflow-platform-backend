@@ -30,7 +30,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public IssuedToken issueForUser(AuthUserEntity user, String ipAddress, String userAgent) {
-        return this.persist(user, UUID.randomUUID(), ipAddress, userAgent);
+        Instant absoluteExpiry = Instant.now().plus(this.jwtProperties.refreshAbsoluteTtlDays(), ChronoUnit.DAYS);
+        return this.persist(user, UUID.randomUUID(), absoluteExpiry, ipAddress, userAgent);
     }
 
     @Override
@@ -58,6 +59,10 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             throw new BadCredentialsException("Refresh token revocado");
         }
 
+        if (entity.getAbsoluteExpiryAt().isBefore(now)) {
+            throw new BadCredentialsException("Sesion expirada, reautenticacion requerida");
+        }
+
         if (entity.getExpiryAt().isBefore(now)) {
             throw new BadCredentialsException("Refresh token expirado");
         }
@@ -69,7 +74,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Transactional
     public IssuedToken rotate(RefreshTokenEntity current, String ipAddress, String userAgent) {
 
-        IssuedToken next = this.persist(current.getUser(), current.getTokenFamily(), ipAddress, userAgent);
+        IssuedToken next = this.persist(
+                current.getUser(),
+                current.getTokenFamily(),
+                current.getAbsoluteExpiryAt(),
+                ipAddress,
+                userAgent);
 
         Instant now = Instant.now();
         current.setRevoked(true);
@@ -117,12 +127,18 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         log.info("Revocados {} tokens del usuario {}", updated, idUser);
     }
 
-    private IssuedToken persist(AuthUserEntity user, UUID family, String ipAddress, String userAgent) {
+    private IssuedToken persist(AuthUserEntity user,
+                                UUID family,
+                                Instant absoluteExpiryAt,
+                                String ipAddress,
+                                String userAgent) {
 
         String raw = this.tokenHasherUtils.generateRawToken();
         String hash = this.tokenHasherUtils.sha256Hex(raw);
 
-        Instant expiryAt = Instant.now().plus(this.jwtProperties.refreshTtlDays(), ChronoUnit.DAYS);
+        Instant slidingExpiry = Instant.now().plus(this.jwtProperties.refreshTtlDays(), ChronoUnit.DAYS);
+        // Nunca emitir un token cuyo sliding supere el limite absoluto de la sesion.
+        Instant expiryAt = slidingExpiry.isAfter(absoluteExpiryAt) ? absoluteExpiryAt : slidingExpiry;
 
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .user(user)
@@ -131,6 +147,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                 .ipAddress(ipAddress)
                 .userAgent(truncate(userAgent, 512))
                 .expiryAt(expiryAt)
+                .absoluteExpiryAt(absoluteExpiryAt)
                 .build();
 
         entity = this.refreshTokenRepository.save(entity);

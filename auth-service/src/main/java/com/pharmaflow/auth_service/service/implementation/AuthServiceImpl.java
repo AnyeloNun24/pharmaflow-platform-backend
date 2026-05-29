@@ -12,6 +12,7 @@ import com.pharmaflow.auth_service.presentation.dto.response.ResponseLoginDto;
 import com.pharmaflow.auth_service.presentation.dto.response.ResponseRefreshDto;
 import com.pharmaflow.auth_service.service.interfaces.AuditLogService;
 import com.pharmaflow.auth_service.service.interfaces.AuthService;
+import com.pharmaflow.auth_service.service.interfaces.FailedAttemptService;
 import com.pharmaflow.auth_service.service.interfaces.PasswordTokenService;
 import com.pharmaflow.auth_service.service.interfaces.RefreshTokenService;
 import com.pharmaflow.auth_service.util.JwtUtils;
@@ -37,10 +38,13 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordTokenService passwordTokenService;
     private final AuditLogService auditLogService;
+    private final FailedAttemptService failedAttemptService;
 
     @Override
     @Transactional
     public ResponseLoginDto login(RequestLoginDto request, String ipAddress, String userAgent) {
+
+        this.failedAttemptService.tryAutoUnlock(request.email());
 
         Authentication authentication = this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())

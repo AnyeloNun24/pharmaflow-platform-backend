@@ -7,6 +7,7 @@ public record JwtProperties (
         String issuer,
         Integer accessTtlMinutes,
         Integer refreshTtlDays,
+        Integer refreshAbsoluteTtlDays,
         String hmacSecret
 ) {
 
@@ -16,6 +17,10 @@ public record JwtProperties (
 
     public long getRefreshTtlMs() {
         return refreshTtlDays * 24 * 60 * 60 * 1_000L;
+    }
+
+    public long getRefreshAbsoluteTtlMs() {
+        return refreshAbsoluteTtlDays * 24 * 60 * 60 * 1_000L;
     }
 
 }

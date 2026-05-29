@@ -37,12 +37,14 @@ security:
     issuer: ${JWT_ISSUER}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES}
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS}
+    refresh-absolute-ttl-days: ${JWT_REFRESH_ABSOLUTE_TTL_DAYS}
     hmac-secret: ${JWT_HMAC_SECRET}
   password-token:
     set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES}
     reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES}
   policy:
     max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS}
+    lockout-duration-minutes: ${SECURITY_LOCKOUT_DURATION_MINUTES}
 
 eureka:
   instance:
