@@ -3,8 +3,6 @@ package com.pharmaflow.auth_service.service.interfaces;
 import com.pharmaflow.auth_service.persistence.entity.AuthUserEntity;
 import com.pharmaflow.auth_service.persistence.entity.RefreshTokenEntity;
 
-import java.util.UUID;
-
 public interface RefreshTokenService {
 
     IssuedToken issueForUser(AuthUserEntity user, String ipAddress, String userAgent);
@@ -16,8 +14,6 @@ public interface RefreshTokenService {
     void revoke(String rawToken);
 
     AuthUserEntity revokeAndReturnUser(String rawToken);
-
-    void revokeFamily(UUID family);
 
     void revokeAllForUser(Long idUser);
 

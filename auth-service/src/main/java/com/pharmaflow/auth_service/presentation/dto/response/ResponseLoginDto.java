@@ -21,7 +21,7 @@ public record ResponseLoginDto(
                 .tokenType("Bearer")
                 .userId(user.getUserId())
                 .email(user.getUsername())
-                .roles(user.getLstRoles())
+                .roles(user.getRoleNames())
                 .build();
     }
 }

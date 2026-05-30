@@ -2,7 +2,7 @@ package com.pharmaflow.auth_service.persistence.repository;
 
 import com.pharmaflow.auth_service.persistence.entity.AuthUserRoleEntity;
 import com.pharmaflow.auth_service.persistence.entity.embeddable_id.UserRoleId;
-import com.pharmaflow.auth_service.persistence.repository.base.ReadOnlyRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.Set;
 
 @Repository
-public interface AuthUserRoleRepository extends ReadOnlyRepository<AuthUserRoleEntity, UserRoleId> {
+public interface AuthUserRoleRepository extends JpaRepository<AuthUserRoleEntity, UserRoleId> {
 
     @Query("""
            SELECT ur

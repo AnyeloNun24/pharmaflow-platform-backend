@@ -1,6 +1,7 @@
 package com.pharmaflow.auth_service.config.filter;
 
 import com.pharmaflow.auth_service.util.JwtUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -53,21 +55,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String jwtToken = authHeader.substring(BEARER_PREFIX.length()).trim();
 
-        if (jwtToken.isEmpty() || !jwtUtils.isTokenValid(jwtToken)) {
+        Optional<Claims> claimsOpt = this.jwtUtils.parseAndValidate(jwtToken);
+        if (claimsOpt.isEmpty()) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (!JwtUtils.TOKEN_TYPE_ACCESS.equalsIgnoreCase(jwtUtils.extractTokenType(jwtToken))) {
+        Claims claims = claimsOpt.get();
+
+        if (!JwtUtils.TOKEN_TYPE_ACCESS.equalsIgnoreCase(JwtUtils.extractTokenType(claims))) {
             log.debug("Token recibido no es de tipo 'access'. Se descarta.");
             filterChain.doFilter(request, response);
             return;
         }
 
-        String username = jwtUtils.extractUsername(jwtToken);
-        Long userId = jwtUtils.extractUserId(jwtToken);
-        List<String> roles = jwtUtils.extractRoles(jwtToken);
-        List<String> permissions = jwtUtils.extractPermissions(jwtToken);
+        String username = JwtUtils.extractUsername(claims);
+        Long userId = JwtUtils.extractUserId(claims);
+        List<String> roles = JwtUtils.extractRoles(claims);
+        List<String> permissions = JwtUtils.extractPermissions(claims);
 
         List<SimpleGrantedAuthority> authorities = Stream.concat(roles.stream(), permissions.stream())
                 .map(SimpleGrantedAuthority::new)

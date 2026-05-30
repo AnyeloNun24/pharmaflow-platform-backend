@@ -1,6 +1,7 @@
 package com.pharmaflow.auth_service.persistence.repository;
 
 import com.pharmaflow.auth_service.persistence.entity.PasswordTokenEntity;
+import com.pharmaflow.auth_service.persistence.entity.type.PasswordTokenType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,7 @@ import java.util.Optional;
 @Repository
 public interface PasswordTokenRepository extends JpaRepository<PasswordTokenEntity, Long> {
 
-    Optional<PasswordTokenEntity> findByToken(String token);
+    Optional<PasswordTokenEntity> findByTokenHash(String tokenHash);
 
     @Modifying
     @Query("""
@@ -25,6 +26,6 @@ public interface PasswordTokenRepository extends JpaRepository<PasswordTokenEnti
               AND pt.type = :type
            """)
     int invalidatePreviousTokens(@Param("idUser") Long idUser,
-                                 @Param("type") String type,
+                                 @Param("type") PasswordTokenType type,
                                  @Param("now") Instant now);
 }

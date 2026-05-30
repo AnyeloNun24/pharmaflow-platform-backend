@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -26,40 +27,44 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onLoginSuccess(String email) {
-        this.authUserRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
-            user.setFailedAttempts((short) 0);
-            user.setLastLoginAt(Instant.now());
-            this.authUserRepository.save(user);
-        });
+    public Optional<AuthUserEntity> onLoginSuccess(String email) {
+        Optional<AuthUserEntity> userOpt = this.authUserRepository.findByEmailIgnoreCase(email);
+        userOpt.ifPresent(user ->
+                this.authUserRepository.resetFailedAttemptsAndStampLogin(user.getIdUser(), Instant.now()));
+        return userOpt;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onLoginFailure(String email) {
-        this.authUserRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
-            if (Boolean.TRUE.equals(user.getAccountLocked())) {
-                return;
-            }
-            short next = (short) (user.getFailedAttempts() + 1);
-            user.setFailedAttempts(next);
+    public Optional<AuthUserEntity> onLoginFailure(String email) {
+        Optional<AuthUserEntity> userOpt = this.authUserRepository.findByEmailIgnoreCase(email);
+        if (userOpt.isEmpty()) return userOpt;
 
-            int max = this.policyProperties.resolvedMaxFailedAttempts();
-            if (next >= max) {
-                user.setAccountLocked(true);
-                user.setLockedAt(Instant.now());
+        AuthUserEntity user = userOpt.get();
+        if (Boolean.TRUE.equals(user.getAccountLocked())) return userOpt;
+
+        Instant now = Instant.now();
+        // Atomic: SQL "UPDATE ... SET failed_attempts = failed_attempts + 1 ... RETURNING ..."
+        Integer newCount = this.authUserRepository.incrementFailedAttemptsAndReturn(user.getIdUser(), now);
+        if (newCount == null) {
+            // La cuenta paso a locked entre el SELECT y el UPDATE; carrera ya resuelta por otro intento.
+            return userOpt;
+        }
+
+        int max = this.policyProperties.resolvedMaxFailedAttempts();
+        if (newCount >= max) {
+            int locked = this.authUserRepository.lockAccount(user.getIdUser(), now);
+            if (locked > 0) {
                 log.warn("Cuenta bloqueada por superar el limite de intentos fallidos: id={}, attempts={}",
-                        user.getIdUser(), next);
-                this.authUserRepository.save(user);
+                        user.getIdUser(), newCount);
                 this.auditLogService.recordSuccess(
                         AuditLogService.ActionType.ACCOUNT_LOCKED,
                         user,
-                        "Cuenta bloqueada tras " + next + " intentos fallidos"
+                        "Cuenta bloqueada tras " + newCount + " intentos fallidos"
                 );
-                return;
             }
-            this.authUserRepository.save(user);
-        });
+        }
+        return userOpt;
     }
 
     @Override
@@ -77,10 +82,7 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
                 return;
             }
 
-            user.setAccountLocked(false);
-            user.setLockedAt(null);
-            user.setFailedAttempts((short) 0);
-            this.authUserRepository.save(user);
+            this.authUserRepository.unlockAccount(user.getIdUser(), Instant.now());
 
             log.info("Desbloqueo automatico de cuenta id={} tras {} minutos",
                     user.getIdUser(), durationMinutes);
@@ -99,14 +101,11 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: id=" + idUser));
 
         boolean wasLocked = Boolean.TRUE.equals(user.getAccountLocked());
-        user.setAccountLocked(false);
-        user.setLockedAt(null);
-        user.setFailedAttempts((short) 0);
-        this.authUserRepository.save(user);
+        this.authUserRepository.unlockAccount(idUser, Instant.now());
 
         String actor = actorEmail != null ? actorEmail : "desconocido";
         log.info("Desbloqueo manual de cuenta id={} por actor={} (estabaBloqueada={})",
-                user.getIdUser(), actor, wasLocked);
+                idUser, actor, wasLocked);
         this.auditLogService.recordSuccess(
                 AuditLogService.ActionType.ACCOUNT_UNLOCKED,
                 user,

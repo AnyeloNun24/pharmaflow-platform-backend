@@ -17,8 +17,13 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.function.Function;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -74,6 +79,48 @@ public class JwtUtils {
         );
     }
 
+    /**
+     * Unico punto de entrada para validar y decodificar un JWT.
+     * Verifica firma + issuer + expiracion en una sola pasada y devuelve los Claims.
+     * Los demas helpers (extractUsername, extractRoles, etc.) operan sobre el Claims ya parseado
+     * para evitar repetir la verificacion HMAC.
+     */
+    public Optional<Claims> parseAndValidate(String token) {
+        if (token == null || token.isBlank()) return Optional.empty();
+        try {
+            return Optional.of(this.parser.parseSignedClaims(token).getPayload());
+        } catch (ExpiredJwtException e) {
+            log.debug("Token expirado: {}", e.getMessage());
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Token invalido: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    public static String extractUsername(Claims claims) {
+        return claims.getSubject();
+    }
+
+    public static Long extractUserId(Claims claims) {
+        return claims.get(CLAIM_USER_ID, Long.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<String> extractRoles(Claims claims) {
+        List<String> roles = claims.get(CLAIM_ROLES, List.class);
+        return roles != null ? roles : List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<String> extractPermissions(Claims claims) {
+        List<String> perms = claims.get(CLAIM_PERMISSIONS, List.class);
+        return perms != null ? perms : List.of();
+    }
+
+    public static String extractTokenType(Claims claims) {
+        return claims.get(CLAIM_TYPE, String.class);
+    }
+
     private String buildToken(String username, Map<String, Object> extraClaims, long expirationMs) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expirationMs);
@@ -88,63 +135,5 @@ public class JwtUtils {
                 .signWith(this.signingKey);
 
         return jwtBuilder.compact();
-    }
-
-    public String extractUsername(String token) {
-        return this.extractClaim(token, Claims::getSubject);
-    }
-
-    public Long extractUserId(String token) {
-        return this.extractClaim(token, claims -> claims.get(CLAIM_USER_ID, Long.class));
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> extractRoles(String token) {
-        List<String> roles = this.extractClaim(token, claims -> claims.get(CLAIM_ROLES, List.class));
-        return roles != null ? roles : List.of();
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> extractPermissions(String token) {
-        List<String> perms = this.extractClaim(token, claims -> claims.get(CLAIM_PERMISSIONS, List.class));
-        return perms != null ? perms : List.of();
-    }
-
-    public String extractTokenType(String token) {
-        return this.extractClaim(token, claims -> claims.get(CLAIM_TYPE, String.class));
-    }
-
-    public String extractJti(String token) {
-        return this.extractClaim(token, Claims::getId);
-    }
-
-    public Date extractExpiration(String token) {
-        return this.extractClaim(token, Claims::getExpiration);
-    }
-
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        return claimsResolver.apply(this.parseClaims(token));
-    }
-
-    private Claims parseClaims(String token) {
-        return this.parser.parseSignedClaims(token).getPayload();
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            this.parseClaims(token);
-            return true;
-        } catch (ExpiredJwtException e) {
-            log.debug("Token expirado: {}", e.getMessage());
-            return false;
-        } catch (JwtException | IllegalArgumentException e) {
-            log.debug("Token invalido: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    public long getTokenRemainingMs(String token) {
-        long remaining = this.extractExpiration(token).getTime() - System.currentTimeMillis();
-        return Math.max(remaining, 0);
     }
 }

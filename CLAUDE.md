@@ -99,21 +99,28 @@ Package layout under `com.pharmaflow.auth_service`:
     - `absolute_expiry_at` is the **hard cap** (`security.jwt.refresh-absolute-ttl-days`, default `30`). It is set at the first issuance of a `token_family` and propagated unchanged on every rotation (the column is `updatable = false`). Once reached, the user must reauthenticate even if the sliding window is still open.
     - `persist()` always emits the new row with `expiry_at = min(now + slidingTtl, absoluteExpiryAt)` — so a rotated token never outlives the absolute cap.
     - `validateAndConsume()` checks the absolute first (message "Sesion expirada, reautenticacion requerida"), then the sliding (message "Refresh token expirado"). Both surface to the client as a generic 401 from `GlobalExceptionHandler`.
-- **Password tokens**: opaque UUID-derived strings stored verbatim in `iam.password_token`. Two types: `SET_PASSWORD` (initial provisioning, long TTL) and `RESET_PASSWORD` (forgot-flow, short TTL). On consume, all refresh tokens for the user are revoked.
+- **Password tokens**: opaque 32-byte Base64Url strings (same generator as refresh tokens). Only `SHA-256(token)` is persisted in `iam.password_token.token_hash`. Two types: `SET_PASSWORD` (initial provisioning, long TTL) and `RESET_PASSWORD` (forgot-flow, short TTL). On consume, all refresh tokens for the user are revoked.
 
 `JwtUtils` caches the `SecretKey` and `JwtParser` in `@PostConstruct` — don't recreate them per call. `TokenHasherUtils` provides `generateRawToken()` and `sha256Hex(...)`.
 
 ### Failed-attempt lockout & audit
 
-`AuthenticationEventListener` subscribes to `AuthenticationSuccessEvent` and the various `AuthenticationFailure*Event`s. It delegates to `FailedAttemptService` (which uses `REQUIRES_NEW` so failure increments survive the login rollback) and to `AuditLogService` (`@Async` on a dedicated executor defined in `AsyncConfig`). `DaoAuthenticationProvider` is configured with `hideUserNotFoundExceptions=false` so the listener can tell "user doesn't exist" apart from "wrong password" — the client still sees the same generic 401 because `GlobalExceptionHandler` collapses both.
+`AuthenticationEventListener` subscribes to `AuthenticationSuccessEvent` and the various `AuthenticationFailure*Event`s. It delegates to `FailedAttemptService` (which uses `REQUIRES_NEW` so failure increments survive the login rollback) and to `AuditLogService`. `DaoAuthenticationProvider` is configured with `hideUserNotFoundExceptions=false` so the listener can tell "user doesn't exist" apart from "wrong password" — the client still sees the same generic 401 because `GlobalExceptionHandler` collapses both.
+
+**Audit pipeline.** `AuditLogService.recordSuccess` / `recordFailure` do **not** write to the DB directly. They snapshot the request context (request id from MDC, IP, user-agent, user id) and publish an `AuditLogEvent`. `AuditLogEventListener` has **two** handlers, both `@Async("auditExecutor")` + `@Transactional(REQUIRES_NEW)`, that filter by `event.success()`:
+- Success events → `@TransactionalEventListener(phase = AFTER_COMMIT, fallbackExecution = true)`. Only fires if the outer transaction commits — avoids FK violations when auditing a freshly-created user/role inside the same transaction.
+- Failure events → `@TransactionalEventListener(phase = AFTER_COMPLETION, fallbackExecution = true)`. Fires on both commit AND rollback — guarantees failure audits survive a `BadCredentialsException` that rolls back the login transaction (critical for SOC 2 / compliance).
+- `fallbackExecution = true` keeps audits firing for callers outside a transaction (e.g. Spring Security event listeners).
+- The audit insert is isolated in `REQUIRES_NEW` so any failure (e.g. check-constraint mismatch) does not poison the caller's transaction. Action names in the `ActionType` enum **must** also be listed in the DB `CHECK` constraint `ck__auth_audit_log__action_type` — when adding a new enum value, ship a migration that drops/recreates the constraint.
+- `AuditLogEventListener` uses `EntityManager.getReference(AuthUserEntity.class, userId)` instead of `findById`, so audit inserts cost 1 SQL statement instead of 2.
 
 ### Auth flows (step by step)
 
 Every request passes through two ordered filters before hitting Spring Security:
 1. **`RequestIdFilter`** (`HIGHEST_PRECEDENCE`) — reads `X-Request-Id` header (must be a valid UUID, otherwise generated), puts it in MDC under `requestId`, and echoes it back. Every log line and audit row for the request carries this ID.
-2. **`JwtAuthenticationFilter`** — runs before `UsernamePasswordAuthenticationFilter`. Only acts when there is a `Bearer ` header AND no existing authentication in the context. Validates signature/issuer/exp via `JwtUtils.isTokenValid`, rejects tokens whose `type` claim is not `access`, then builds an `AuthenticatedPrincipal(userId, username)` and an authentication with `ROLE_*` + permission authorities pulled from the token claims. Never queries the DB on the hot path.
+2. **`JwtAuthenticationFilter`** — runs before `UsernamePasswordAuthenticationFilter`. Only acts when there is a `Bearer ` header AND no existing authentication in the context. **Parses & verifies the JWT exactly once** via `JwtUtils.parseAndValidate(token)` returning `Optional<Claims>`; the static `JwtUtils.extract*(Claims)` helpers operate on the already-parsed Claims (avoids the 6× HMAC verification hot-path). Rejects tokens whose `type` claim is not `access`, then builds an `AuthenticatedPrincipal(userId, username)` with `ROLE_*` + permission authorities from the claims. Never queries the DB on the hot path.
 
-Endpoints in `/auth/**` are `permitAll`; everything else is `authenticated`. `@PreAuthorize` on controller methods is the place to add role-level restrictions on top — currently no controller pins to a specific role, so any authenticated user can call e.g. `POST /users/{id}/unlock`. Add `@PreAuthorize("hasRole('...')")` when business rules require it.
+Endpoints in `/auth/**` are `permitAll`; `/management/health/**` and `/management/info` are `permitAll`; everything else (including the rest of `/management/**`) requires authentication. `@PreAuthorize` on controller methods adds role-level restrictions — currently `POST /users` requires `ADMIN` or `SUPER_ADMIN`; `POST /users/{id}/unlock` is any-authenticated (no policy yet).
 
 **`POST /auth/login` — `AuthServiceImpl.login`**
 1. `FailedAttemptService.tryAutoUnlock(email)` — if the account was previously locked and `lockout-duration-minutes` has elapsed since `locked_at`, clear the lock and reset counter (audited as `ACCOUNT_UNLOCKED`). Runs in `REQUIRES_NEW`.
@@ -139,9 +146,13 @@ Endpoints in `/auth/**` are `permitAll`; everything else is `authenticated`. `@P
 5. Audit `REFRESH_TOKEN` success. Response: `ResponseRefreshDto` with new access + new refresh.
 
 **`POST /auth/logout` — `AuthServiceImpl.logout`**
-1. `RefreshTokenService.revokeAndReturnUser(raw)` — hashes the token, if found and not yet revoked marks it `revoked = true` with `revoked_at = now`. Returns the user (or `null` if token not found).
-2. If a user was returned, audit `LOGOUT`. Always returns 200 with "Sesion cerrada" — invalid/expired/unknown tokens do not 401 to avoid leaking which tokens exist.
-3. **Only this token's row is revoked**, not the whole family — other devices keep their sessions.
+1. `RefreshTokenService.revokeAndReturnUser(raw)` is defensive (mirror of `/refresh`):
+    - blank / null token → `BadCredentialsException` ("Refresh token requerido") → 401.
+    - token not found → `BadCredentialsException` ("Refresh token invalido") → 401.
+    - token already revoked → `RefreshTokenReusedException` + family revoke + audit `REFRESH_TOKEN_REUSE` → 401 with `errorCode: REFRESH_TOKEN_REUSED`. Logging out with an already-revoked token is treated as a reuse signal (same threat model as `/refresh`).
+    - token active → mark `revoked = true`, `revoked_at = now`, return the user.
+2. Audit `LOGOUT` (only reached on the success branch).
+3. **Only this token's row is revoked**, not the whole family — other devices keep their sessions. The family revoke happens only on the reuse branch.
 
 **`POST /auth/forgot-password` — `AuthServiceImpl.forgotPassword`**
 1. Look up user by email (case-insensitive). If not found or `!active`: log it server-side and return 200 with the same generic message anyway (no enumeration).
@@ -159,6 +170,19 @@ Endpoints in `/auth/**` are `permitAll`; everything else is `authenticated`. `@P
 4. `RefreshTokenService.revokeAllForUser(userId)` — invalidates every session globally (forces re-login on all devices).
 5. Audit `SET_PASSWORD` if token type was `SET_PASSWORD`, otherwise `PASSWORD_CHANGED`.
 
+**`POST /users` — `UserManagementController.create`** (any authenticated caller; no role guard yet)
+1. Validate body (`RequestCreateUserDto`): email, names, surnames, `roleNames` (min 1) required; phoneNumber/birthDate/gender optional with format checks.
+2. `UserManagementService.createUser`:
+    - Pre-check `findByEmailIgnoreCase` → throws `EmailAlreadyRegisteredException` (handled as 409) on duplicate.
+    - `AuthRoleRepository.findActiveByNames` validates **all** requested role names exist and are active. Any missing → `EntityNotFoundException` listing the missing names (404).
+    - Resolve `createdBy` / `assignedBy` from the JWT principal's `userId`.
+    - Persist `AuthUserEntity` with `password_hash = null`, `force_password_change = true`. A null password makes BCrypt match fail → user cannot log in until they set a password.
+    - Persist one `AuthUserRoleEntity` per requested role and audit `ROLE_ASSIGNED` for each.
+    - `PasswordTokenService.issueSetPasswordToken(user)` → emits a `SET_PASSWORD` token (long TTL).
+    - Audit `USER_CREATED` (single row, includes the requested role names in the description).
+    - **TODO**: publish a `UserCreated` event to Kafka so notification-service can send the welcome / set-password email. Currently the token is logged for development; remove the log before going to production.
+3. Response 201 with `{ idUser, email, roles, message }`.
+
 **`POST /users/{idUser}/unlock` — `UserManagementController.unlock`** (any authenticated caller; no role guard yet — add `@PreAuthorize` when the policy is decided)
 1. `FailedAttemptService.forceUnlock(idUser, actorEmail)` — loads user (404 if missing), clears lock state and counter, audits `ACCOUNT_UNLOCKED` recording which actor performed the action (resolved from the JWT principal). `REQUIRES_NEW`.
 
@@ -167,6 +191,18 @@ Endpoints in `/auth/**` are `permitAll`; everything else is `authenticated`. `@P
 2. `JwtAuthenticationFilter` parses the Bearer token, validates signature/issuer/exp/type, builds authorities from the JWT claims (no DB call), sets the context.
 3. `@PreAuthorize` (if present) checks roles/permissions.
 4. Failures hit `RestAuthenticationEntryPoint` (401) or `RestAccessDeniedHandler` (403) — both emit a JSON body consistent with `GlobalExceptionHandler`.
+
+### Operational TODOs (auth-service)
+
+These are known follow-ups documented so they don't get lost between sessions:
+
+- **Token-table cleanup jobs**: `refresh_token` and `password_token` grow unbounded — revoked / used / expired rows are never purged. Add a `@Scheduled` job (or DB cron) that nightly deletes:
+    - `refresh_token` where `(revoked = TRUE AND revoked_at < now() - 90 days)` OR `expiry_at < now() - 7 days`.
+    - `password_token` where `used = TRUE AND used_at < now() - 30 days` OR `expiry_at < now() - 7 days`.
+- **`auth_audit_log` retention**: append-only and grows fast. Partition by month (`PARTITION BY RANGE (created_at)`) + retention of 1–2 years (compliance-driven). Design this before the table reaches a few million rows; doing it after requires a downtime migration.
+- **Email integration**: `forgotPassword` and `createUser` log a `TODO` for the welcome / reset email. The plan is to publish domain events (`UserCreated`, `PasswordResetRequested`) to Kafka topic `iam.user.events` and let `notification-service` send via SMTP/SES. See conversation history for the full architecture (outbox pattern + MinIO/S3 for attachments).
+- **Rate limiting**: not implemented yet. Add at the api-gateway level (Spring Cloud Gateway `RequestRateLimiter` with Redis) so it covers `/auth/login`, `/auth/refresh`, `/auth/forgot-password` before they hit auth-service. Per-account lockout already protects a specific victim from brute force; per-IP rate limit is what stops attackers cycling through 1000 different emails.
+- **Trusted-proxy validation**: `RequestUtils.resolveClientIp` trusts `X-Forwarded-For` unconditionally. The api-gateway is the only valid source — if auth-service is ever exposed beyond the gateway, lock this down (allowlist of upstream IPs or `ForwardedHeaderFilter` with trusted-proxies config).
 
 ### Flyway
 

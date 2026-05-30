@@ -1,5 +1,6 @@
-INSERT INTO iam.auth_role (role_name, description, active, created_by)
-VALUES ('SUPER_ADMIN', 'Administrador total del sistema', TRUE, NULL);
+INSERT INTO iam.auth_role (role_name, description, active, created_by) VALUES
+    ('SUPER_ADMIN', 'Administrador total del sistema', TRUE, NULL),
+    ('ADMIN',       'Administrador operativo (gestion de usuarios y roles)', TRUE, NULL);
 
 INSERT INTO iam.auth_user (
     names, surnames, email, password_hash,
@@ -14,7 +15,7 @@ VALUES (
 
 UPDATE iam.auth_role
 SET created_by = (SELECT id_user FROM iam.auth_user WHERE email = 'admin@empresa.com')
-WHERE role_name = 'SUPER_ADMIN';
+WHERE role_name IN ('SUPER_ADMIN', 'ADMIN');
 
 UPDATE iam.auth_user SET created_by = id_user
 WHERE email = 'admin@empresa.com';

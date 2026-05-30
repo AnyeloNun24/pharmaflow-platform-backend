@@ -1,5 +1,6 @@
 package com.pharmaflow.auth_service.persistence.entity;
 
+import com.pharmaflow.auth_service.persistence.entity.type.Gender;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -37,8 +38,9 @@ public class AuthUserEntity implements Serializable {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
-    @Column(name = "gender")
-    private Character gender;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 1, columnDefinition = "char(1)")
+    private Gender gender;
 
     @Column(name = "profile_photo_url", length = 500)
     private String profilePhotoUrl;

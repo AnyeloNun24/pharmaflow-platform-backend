@@ -1,5 +1,7 @@
 package com.pharmaflow.auth_service.presentation.advice;
 
+import com.pharmaflow.auth_service.service.exception.EmailAlreadyRegisteredException;
+import com.pharmaflow.auth_service.service.exception.RefreshTokenReusedException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBadCredentials(AuthenticationException ex, WebRequest request) {
         log.warn("Credenciales invalidas: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "Credenciales invalidas", request);
+    }
+
+    @ExceptionHandler(RefreshTokenReusedException.class)
+    public ResponseEntity<Map<String, Object>> handleRefreshTokenReused(RefreshTokenReusedException ex, WebRequest request) {
+        log.warn("Refresh token reutilizado: {}", ex.getMessage());
+        Map<String, Object> body = baseBody(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+        body.put("errorCode", "REFRESH_TOKEN_REUSED");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     @ExceptionHandler(DisabledException.class)
@@ -61,6 +71,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex, WebRequest request) {
         log.warn("Recurso no encontrado: {}", ex.getMessage());
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException ex, WebRequest request) {
+        log.warn("Email duplicado: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -22,7 +22,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
-    private final UserDetailsService userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
     private final AuthUserRepository authUserRepository;
     private final JwtUtils jwtUtils;
     private final RefreshTokenService refreshTokenService;
@@ -70,6 +69,10 @@ public class AuthServiceImpl implements AuthService {
         RefreshTokenEntity current = this.refreshTokenService.validateAndConsume(request.refreshToken());
         AuthUserEntity user = current.getUser();
 
+        this.failedAttemptService.tryAutoUnlock(user.getEmail());
+
+        user = this.authUserRepository.findById(user.getIdUser()).orElse(user);
+
         if (!Boolean.TRUE.equals(user.getActive())
                 || Boolean.TRUE.equals(user.getAccountLocked())
                 || Boolean.TRUE.equals(user.getAccountExpired())) {
@@ -80,7 +83,7 @@ public class AuthServiceImpl implements AuthService {
             throw new DisabledException("Cuenta no disponible");
         }
 
-        CustomUserDetails userDetails = (CustomUserDetails) this.userDetailsService.loadUserByUsername(user.getEmail());
+        CustomUserDetails userDetails = this.userDetailsService.loadUserDetailsFor(user);
         RefreshTokenService.IssuedToken rotated = this.refreshTokenService.rotate(current, ipAddress, userAgent);
         String accessToken = this.jwtUtils.generateAccessToken(userDetails);
 
@@ -95,10 +98,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(String refreshToken) {
         AuthUserEntity user = this.refreshTokenService.revokeAndReturnUser(refreshToken);
-        if (user != null) {
-            this.auditLogService.recordSuccess(
-                    AuditLogService.ActionType.LOGOUT, user, "Sesion cerrada");
-        }
+        this.auditLogService.recordSuccess(
+                AuditLogService.ActionType.LOGOUT, user, "Sesion cerrada");
     }
 
     @Override
@@ -116,7 +117,8 @@ public class AuthServiceImpl implements AuthService {
                             AuditLogService.ActionType.RESET_PASSWORD, user,
                             "Token RESET_PASSWORD emitido");
                     log.info("forgot-password: token emitido para email={} token={}", request.email(), token);
-                    // TODO: integrar envio de email con el link a /set-password?token=...
+                    // TODO: publicar evento PasswordResetRequested al topic iam.user.events para que
+                    //       notification-service envie el correo. No loguear el token en plano en prod.
                 }, () -> log.info("forgot-password: email no registrado={}", request.email()));
     }
 

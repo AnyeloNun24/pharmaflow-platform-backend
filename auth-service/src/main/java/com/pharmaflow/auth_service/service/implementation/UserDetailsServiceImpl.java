@@ -35,9 +35,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-
         AuthUserEntity user = this.authUserRepository.findByEmailIgnoreCase(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+        return this.buildUserDetails(user);
+    }
+
+    @Transactional(readOnly = true)
+    public CustomUserDetails loadUserDetailsFor(AuthUserEntity user) {
+        return this.buildUserDetails(user);
+    }
+
+    private CustomUserDetails buildUserDetails(AuthUserEntity user) {
 
         Set<AuthRoleEntity> activeRoles = this.authUserRoleRepository
                 .findActiveRolesByUserId(user.getIdUser(), Instant.now())
@@ -78,5 +86,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 roleNames
         );
     }
-
 }

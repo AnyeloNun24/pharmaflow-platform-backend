@@ -15,6 +15,8 @@ import org.springframework.security.authentication.event.AuthenticationSuccessEv
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,8 +29,7 @@ public class AuthenticationEventListener {
     @EventListener
     public void onSuccess(AuthenticationSuccessEvent event) {
         String email = event.getAuthentication().getName();
-        this.failedAttemptService.onLoginSuccess(email);
-        this.findUser(email).ifPresent(user ->
+        this.failedAttemptService.onLoginSuccess(email).ifPresent(user ->
                 this.auditLogService.recordSuccess(
                         AuditLogService.ActionType.LOGIN,
                         user,
@@ -42,11 +43,13 @@ public class AuthenticationEventListener {
         boolean userNotFound = event.getException() instanceof UsernameNotFoundException
                 || event.getException().getCause() instanceof UsernameNotFoundException;
 
-        if (!userNotFound) {
-            this.failedAttemptService.onLoginFailure(email);
+        AuthUserEntity user;
+        if (userNotFound) {
+            user = null;
+        } else {
+            user = this.failedAttemptService.onLoginFailure(email).orElse(null);
         }
 
-        AuthUserEntity user = this.findUser(email).orElse(null);
         this.auditLogService.recordFailure(
                 AuditLogService.ActionType.LOGIN_FAILED,
                 user,
@@ -82,13 +85,13 @@ public class AuthenticationEventListener {
                 AuditLogService.ActionType.LOGIN_FAILED, user, description, reason);
     }
 
-    private java.util.Optional<AuthUserEntity> findUser(String email) {
-        if (email == null || email.isBlank()) return java.util.Optional.empty();
+    private Optional<AuthUserEntity> findUser(String email) {
+        if (email == null || email.isBlank()) return Optional.empty();
         try {
             return this.authUserRepository.findByEmailIgnoreCase(email);
         } catch (Exception ex) {
             log.warn("No se pudo localizar usuario para audit: {}", ex.getMessage());
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
     }
 }

@@ -488,6 +488,7 @@ CREATE TABLE iam.refresh_token (
     ip_address          INET            NULL,
     user_agent          VARCHAR(512)    NULL,
     expiry_at           TIMESTAMPTZ     NOT NULL,
+    absolute_expiry_at  TIMESTAMPTZ     NOT NULL,
     revoked             BOOLEAN NOT     NULL DEFAULT FALSE,
     revoked_at          TIMESTAMPTZ     NULL,
     created_at          TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -567,7 +568,13 @@ COMMENT ON COLUMN iam.refresh_token.revoked_at IS
     'Fecha y hora en que el token fue revocado. NULL si aún está activo.';
 
 COMMENT ON COLUMN iam.refresh_token.expiry_at IS
-    'Fecha y hora límite de validez del token en UTC.';
+    'Sliding expiry: vence si el usuario no usa la sesion por mas de refresh-ttl-days. '
+        'Se recalcula en cada rotacion como min(now + refreshTtlDays, absolute_expiry_at).';
+
+COMMENT ON COLUMN iam.refresh_token.absolute_expiry_at IS
+    'Limite duro de vida de la sesion. Se fija al emitir el primer token de la familia '
+        'y se propaga sin modificarse en cada rotacion. Una vez alcanzado, el usuario '
+        'debe reautenticarse aunque el token siga dentro de su ventana deslizante.';
 
 COMMENT ON COLUMN iam.refresh_token.created_at IS
     'Fecha y hora de emisión del token en UTC.';
@@ -582,7 +589,7 @@ CREATE TABLE iam.password_token (
 
     id_password_token   BIGINT          NOT NULL GENERATED ALWAYS AS IDENTITY,
     id_user             BIGINT          NOT NULL,
-    token               VARCHAR(100)         NOT NULL,
+    token_hash          VARCHAR(64)     NOT NULL,
     type                VARCHAR(20)     NOT NULL,
     used                BOOLEAN NOT     NULL DEFAULT FALSE,
     used_at             TIMESTAMPTZ     NULL,
@@ -599,8 +606,8 @@ CREATE TABLE iam.password_token (
         REFERENCES iam.auth_user(id_user),
 
     -- Unique
-    CONSTRAINT uk__password_token__token
-        UNIQUE (token),
+    CONSTRAINT uk__password_token__token_hash
+        UNIQUE (token_hash),
 
     -- Check constraint
     CONSTRAINT ck__password_token__type
@@ -631,8 +638,9 @@ COMMENT ON COLUMN iam.password_token.id_password_token IS
 COMMENT ON COLUMN iam.password_token.id_user IS
     'Referencia al usuario dueño del token.';
 
-COMMENT ON COLUMN iam.password_token.token IS
-    'Valor único del token (UUID). Se envía dentro del link al correo.';
+COMMENT ON COLUMN iam.password_token.token_hash IS
+    'Hash SHA-256 (hex, 64 chars) del token enviado al correo. El token original NO se persiste, '
+        'solo el hash, igual que refresh_token. Lookups por token hashean el valor recibido y comparan.';
 
 COMMENT ON COLUMN iam.password_token.type IS
     'Propósito del token: set_password = primer acceso, reset_password = recuperación.';
@@ -682,7 +690,7 @@ CREATE TABLE iam.auth_audit_log (
             'SET_PASSWORD', 'RESET_PASSWORD',
             'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED',
             'ROLE_ASSIGNED', 'ROLE_REVOKED',
-            'PASSWORD_CHANGED'
+            'PASSWORD_CHANGED', 'USER_CREATED'
         )),
 
     CONSTRAINT ck__auth_audit_log__failure_reason

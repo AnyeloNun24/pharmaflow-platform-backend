@@ -16,7 +16,8 @@ public interface AuditLogService {
         ACCOUNT_UNLOCKED,
         ROLE_ASSIGNED,
         ROLE_REVOKED,
-        PASSWORD_CHANGED
+        PASSWORD_CHANGED,
+        USER_CREATED
     }
 
     void recordSuccess(ActionType action, AuthUserEntity user, String description);

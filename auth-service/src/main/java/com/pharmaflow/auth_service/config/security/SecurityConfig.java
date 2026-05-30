@@ -43,7 +43,8 @@ public class SecurityConfig {
                                 "/auth/logout",
                                 "/auth/forgot-password",
                                 "/auth/set-password").permitAll()
-                        .requestMatchers("/management/**").permitAll()
+                        .requestMatchers("/management/health/**", "/management/info").permitAll()
+                        .requestMatchers("/management/**").authenticated()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

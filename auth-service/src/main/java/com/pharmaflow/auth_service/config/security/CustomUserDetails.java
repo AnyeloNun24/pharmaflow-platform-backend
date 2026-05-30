@@ -1,6 +1,6 @@
 package com.pharmaflow.auth_service.config.security;
 
-import lombok.*;
+import lombok.Getter;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.SpringSecurityCoreVersion;
@@ -9,12 +9,20 @@ import org.springframework.util.Assert;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
+/**
+ * Implementacion inmutable de {@link UserDetails} con campos extra utilizados por la app.
+ * Solo {@link #eraseCredentials()} muta el password (a null), por contrato de
+ * {@link CredentialsContainer}.
+ */
 @Getter
-@Setter
-@Builder
-public class CustomUserDetails implements UserDetails, CredentialsContainer {
+public final class CustomUserDetails implements UserDetails, CredentialsContainer {
 
     private final String email;
     private String password;
@@ -24,13 +32,18 @@ public class CustomUserDetails implements UserDetails, CredentialsContainer {
     private final boolean accountNonLocked;
     private final Set<GrantedAuthority> authorities;
 
-    // Info extra
-    private Long userId;
-    private Set<String> lstRoles;
+    private final Long userId;
+    private final Set<String> roleNames;
 
-    public CustomUserDetails(String email, String password, boolean enabled, boolean accountNonExpired, boolean credentialsNonExpired,
-                             boolean accountNonLocked, Set<GrantedAuthority> authorities, Long userId, Set<String> lstRoles
-    ) {
+    public CustomUserDetails(String email,
+                             String password,
+                             boolean enabled,
+                             boolean accountNonExpired,
+                             boolean credentialsNonExpired,
+                             boolean accountNonLocked,
+                             Set<GrantedAuthority> authorities,
+                             Long userId,
+                             Set<String> roleNames) {
         this.email = email;
         this.password = password;
         this.enabled = enabled;
@@ -39,7 +52,7 @@ public class CustomUserDetails implements UserDetails, CredentialsContainer {
         this.accountNonLocked = accountNonLocked;
         this.authorities = Collections.unmodifiableSet(sortAuthorities(authorities));
         this.userId = userId;
-        this.lstRoles = lstRoles;
+        this.roleNames = roleNames != null ? Set.copyOf(roleNames) : Set.of();
     }
 
     @Override
@@ -84,9 +97,7 @@ public class CustomUserDetails implements UserDetails, CredentialsContainer {
 
     private static SortedSet<GrantedAuthority> sortAuthorities(Collection<? extends GrantedAuthority> authorities) {
         Assert.notNull(authorities, "Cannot pass a null GrantedAuthority collection");
-        // Ensure array iteration order is predictable (as per
-        // UserDetails.getAuthorities() contract and SEC-717)
-        SortedSet<GrantedAuthority> sortedAuthorities = new TreeSet<>(new CustomUserDetails.AuthorityComparator());
+        SortedSet<GrantedAuthority> sortedAuthorities = new TreeSet<>(new AuthorityComparator());
         for (GrantedAuthority grantedAuthority : authorities) {
             Assert.notNull(grantedAuthority, "GrantedAuthority list cannot contain any null elements");
             sortedAuthorities.add(grantedAuthority);
@@ -95,21 +106,14 @@ public class CustomUserDetails implements UserDetails, CredentialsContainer {
     }
 
     private static class AuthorityComparator implements Comparator<GrantedAuthority>, Serializable {
-
         @Serial
         private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
         @Override
         public int compare(GrantedAuthority g1, GrantedAuthority g2) {
-            if (g2.getAuthority() == null) {
-                return -1;
-            }
-            if (g1.getAuthority() == null) {
-                return 1;
-            }
+            if (g2.getAuthority() == null) return -1;
+            if (g1.getAuthority() == null) return 1;
             return g1.getAuthority().compareTo(g2.getAuthority());
         }
-
     }
-
 }

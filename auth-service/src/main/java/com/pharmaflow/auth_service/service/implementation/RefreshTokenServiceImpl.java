@@ -4,6 +4,7 @@ import com.pharmaflow.auth_service.config.properties.JwtProperties;
 import com.pharmaflow.auth_service.persistence.entity.AuthUserEntity;
 import com.pharmaflow.auth_service.persistence.entity.RefreshTokenEntity;
 import com.pharmaflow.auth_service.persistence.repository.RefreshTokenRepository;
+import com.pharmaflow.auth_service.service.exception.RefreshTokenReusedException;
 import com.pharmaflow.auth_service.service.interfaces.AuditLogService;
 import com.pharmaflow.auth_service.service.interfaces.RefreshTokenService;
 import com.pharmaflow.auth_service.util.TokenHasherUtils;
@@ -26,6 +27,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final TokenHasherUtils tokenHasherUtils;
     private final JwtProperties jwtProperties;
     private final AuditLogService auditLogService;
+    private final RefreshTokenFamilyRevoker familyRevoker;
 
     @Override
     @Transactional
@@ -35,7 +37,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public RefreshTokenEntity validateAndConsume(String rawToken) {
 
         if (rawToken == null || rawToken.isBlank()) {
@@ -55,8 +57,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                     entity.getUser(),
                     "Reuso de refresh token detectado, familia " + entity.getTokenFamily() + " revocada",
                     "Refresh token revocado reutilizado");
-            this.revokeFamily(entity.getTokenFamily());
-            throw new BadCredentialsException("Refresh token revocado");
+            this.familyRevoker.revoke(entity.getTokenFamily());
+            throw new RefreshTokenReusedException(
+                    "Refresh token reutilizado o ya revocado. La sesion fue invalidada como medida de seguridad.");
         }
 
         if (entity.getAbsoluteExpiryAt().isBefore(now)) {
@@ -99,25 +102,30 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public AuthUserEntity revokeAndReturnUser(String rawToken) {
-        if (rawToken == null || rawToken.isBlank()) return null;
-        String hash = this.tokenHasherUtils.sha256Hex(rawToken);
-        return this.refreshTokenRepository.findByTokenHash(hash)
-                .map(entity -> {
-                    if (Boolean.FALSE.equals(entity.getRevoked())) {
-                        entity.setRevoked(true);
-                        entity.setRevokedAt(Instant.now());
-                        this.refreshTokenRepository.save(entity);
-                    }
-                    return entity.getUser();
-                })
-                .orElse(null);
-    }
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new BadCredentialsException("Refresh token requerido");
+        }
 
-    @Override
-    @Transactional
-    public void revokeFamily(UUID family) {
-        int updated = this.refreshTokenRepository.revokeAllByFamily(family, Instant.now());
-        log.info("Revocados {} tokens de la familia {}", updated, family);
+        String hash = this.tokenHasherUtils.sha256Hex(rawToken);
+        RefreshTokenEntity entity = this.refreshTokenRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new BadCredentialsException("Refresh token invalido"));
+
+        if (Boolean.TRUE.equals(entity.getRevoked())) {
+            log.warn("Logout sobre refresh token ya revocado (family={}). Revocando familia.", entity.getTokenFamily());
+            this.auditLogService.recordFailure(
+                    AuditLogService.ActionType.REFRESH_TOKEN_REUSE,
+                    entity.getUser(),
+                    "Logout sobre refresh token revocado, familia " + entity.getTokenFamily() + " revocada",
+                    "Refresh token revocado reutilizado en logout");
+            this.familyRevoker.revoke(entity.getTokenFamily());
+            throw new RefreshTokenReusedException(
+                    "Refresh token reutilizado o ya revocado. La sesion fue invalidada como medida de seguridad.");
+        }
+
+        entity.setRevoked(true);
+        entity.setRevokedAt(Instant.now());
+        this.refreshTokenRepository.save(entity);
+        return entity.getUser();
     }
 
     @Override
@@ -137,7 +145,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         String hash = this.tokenHasherUtils.sha256Hex(raw);
 
         Instant slidingExpiry = Instant.now().plus(this.jwtProperties.refreshTtlDays(), ChronoUnit.DAYS);
-        // Nunca emitir un token cuyo sliding supere el limite absoluto de la sesion.
         Instant expiryAt = slidingExpiry.isAfter(absoluteExpiryAt) ? absoluteExpiryAt : slidingExpiry;
 
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
@@ -154,7 +161,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         return new IssuedToken(raw, entity);
     }
 
-    private String truncate(String value, int max) {
+    private static String truncate(String value, int max) {
         if (value == null) return null;
         return value.length() > max ? value.substring(0, max) : value;
     }

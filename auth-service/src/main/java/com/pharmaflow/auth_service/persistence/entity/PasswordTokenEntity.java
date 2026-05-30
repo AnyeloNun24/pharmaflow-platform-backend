@@ -1,5 +1,6 @@
 package com.pharmaflow.auth_service.persistence.entity;
 
+import com.pharmaflow.auth_service.persistence.entity.type.PasswordTokenType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +11,7 @@ import java.time.Instant;
         name = "password_token",
         schema = "iam",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk__password_token__token", columnNames = "token")
+                @UniqueConstraint(name = "uk__password_token__token_hash", columnNames = "token_hash")
         }
 )
 @Entity
@@ -21,9 +22,6 @@ import java.time.Instant;
 @Builder
 public class PasswordTokenEntity implements Serializable {
 
-    public static final String TYPE_SET_PASSWORD = "SET_PASSWORD";
-    public static final String TYPE_RESET_PASSWORD = "RESET_PASSWORD";
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_password_token", nullable = false, updatable = false)
@@ -33,11 +31,12 @@ public class PasswordTokenEntity implements Serializable {
     @JoinColumn(name = "id_user", nullable = false)
     private AuthUserEntity user;
 
-    @Column(name = "token", nullable = false, length = 100, updatable = false)
-    private String token;
+    @Column(name = "token_hash", nullable = false, length = 64, updatable = false)
+    private String tokenHash;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20, updatable = false)
-    private String type;
+    private PasswordTokenType type;
 
     @Column(name = "used", nullable = false)
     @Builder.Default
