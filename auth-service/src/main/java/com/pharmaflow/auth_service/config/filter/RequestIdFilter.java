@@ -14,6 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
+// @Component → Spring Boot lo registra automáticamente en la cadena del servlet (sin declararlo en SecurityConfig)
+// @Order(HIGHEST_PRECEDENCE) → orden Integer.MIN_VALUE; corre antes que Spring Security (orden -100)
+// Así el requestId está en el MDC antes de que cualquier otro filtro escriba un log
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {
@@ -28,6 +31,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Reutiliza el ID que el cliente o el gateway envía para poder correlacionar
         String requestId = request.getHeader(HEADER_REQUEST_ID);
         if (requestId == null || requestId.isBlank() || !isValidUuid(requestId)) {
             requestId = UUID.randomUUID().toString();
@@ -35,9 +39,12 @@ public class RequestIdFilter extends OncePerRequestFilter {
 
         try {
             MDC.put(MDC_REQUEST_ID, requestId);
+            // Devolver el ID al cliente permite correlacionar el request con los logs del servidor
             response.setHeader(HEADER_REQUEST_ID, requestId);
             filterChain.doFilter(request, response);
         } finally {
+            // Tomcat reutiliza hilos (thread pool); sin remove() el siguiente request
+            // heredaría el requestId de este, corrompiendo la correlación de logs
             MDC.remove(MDC_REQUEST_ID);
         }
     }
