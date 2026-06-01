@@ -45,6 +45,8 @@ public class AuthServiceImpl implements AuthService {
 
         this.failedAttemptService.tryAutoUnlock(request.email());
 
+        // Delega a DaoAuthenticationProvider → UserDetailsServiceImpl → BCrypt.
+        // En caso de fallo lanza BadCredentialsException / LockedException / DisabledException, etc.
         Authentication authentication = this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -55,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
 
         String accessToken = this.jwtUtils.generateAccessToken(userDetails);
+
         RefreshTokenService.IssuedToken refresh = this.refreshTokenService.issueForUser(user, ipAddress, userAgent);
 
         log.info("Login exitoso para usuario id={}", user.getIdUser());
@@ -87,8 +90,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshTokenService.IssuedToken rotated = this.refreshTokenService.rotate(current, ipAddress, userAgent);
         String accessToken = this.jwtUtils.generateAccessToken(userDetails);
 
-        this.auditLogService.recordSuccess(
-                AuditLogService.ActionType.REFRESH_TOKEN, user, "Refresh token rotado");
+        this.auditLogService.recordSuccess(AuditLogService.ActionType.REFRESH_TOKEN, user, "Refresh token rotado");
 
         log.debug("Refresh exitoso para usuario id={}", user.getIdUser());
         return ResponseRefreshDto.of(accessToken, rotated.rawToken());
@@ -98,8 +100,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(String refreshToken) {
         AuthUserEntity user = this.refreshTokenService.revokeAndReturnUser(refreshToken);
-        this.auditLogService.recordSuccess(
-                AuditLogService.ActionType.LOGOUT, user, "Sesion cerrada");
+        this.auditLogService.recordSuccess(AuditLogService.ActionType.LOGOUT, user, "Sesion cerrada");
     }
 
     @Override
