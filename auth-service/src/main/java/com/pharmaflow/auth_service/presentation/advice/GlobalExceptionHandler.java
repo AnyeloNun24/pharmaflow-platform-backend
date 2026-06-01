@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.CredentialsExpiredException;
@@ -59,6 +60,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CredentialsExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleCredentialsExpired(CredentialsExpiredException ex, WebRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, "Credenciales expiradas. Cambie su contrasena.", request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+        log.warn("Acceso denegado: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, "No tienes permisos para acceder a este recurso", request);
     }
 
     @ExceptionHandler(AuthenticationException.class)
