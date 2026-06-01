@@ -87,8 +87,7 @@ public class PasswordTokenServiceImpl implements PasswordTokenService {
         AuditLogService.ActionType action = entity.getType() == PasswordTokenType.SET_PASSWORD
                 ? AuditLogService.ActionType.SET_PASSWORD
                 : AuditLogService.ActionType.PASSWORD_CHANGED;
-        this.auditLogService.recordSuccess(action, user,
-                "Password actualizada via token tipo " + entity.getType());
+        this.auditLogService.recordSuccess(action, user, "Password actualizada via token tipo " + entity.getType());
 
         log.info("Password actualizada para usuario id={} (token type={})", user.getIdUser(), entity.getType());
     }

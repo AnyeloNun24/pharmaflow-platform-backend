@@ -44,10 +44,9 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
         if (Boolean.TRUE.equals(user.getAccountLocked())) return userOpt;
 
         Instant now = Instant.now();
-        // Atomic: SQL "UPDATE ... SET failed_attempts = failed_attempts + 1 ... RETURNING ..."
+
         Integer newCount = this.authUserRepository.incrementFailedAttemptsAndReturn(user.getIdUser(), now);
         if (newCount == null) {
-            // La cuenta paso a locked entre el SELECT y el UPDATE; carrera ya resuelta por otro intento.
             return userOpt;
         }
 
@@ -72,6 +71,7 @@ public class FailedAttemptServiceImpl implements FailedAttemptService {
     public void tryAutoUnlock(String email) {
         if (email == null || email.isBlank()) return;
         this.authUserRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+            // Si cuenta no esta bloqueada o su fecha de bloqueo es nula, no hace nada
             if (!Boolean.TRUE.equals(user.getAccountLocked()) || user.getLockedAt() == null) {
                 return;
             }

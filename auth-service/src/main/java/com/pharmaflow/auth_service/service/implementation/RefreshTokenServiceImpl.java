@@ -95,12 +95,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     @Transactional
-    public void revoke(String rawToken) {
-        this.revokeAndReturnUser(rawToken);
-    }
-
-    @Override
-    @Transactional
     public AuthUserEntity revokeAndReturnUser(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
             throw new BadCredentialsException("Refresh token requerido");
@@ -139,7 +133,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                                 UUID family,
                                 Instant absoluteExpiryAt,
                                 String ipAddress,
-                                String userAgent) {
+                                String userAgent
+    ) {
 
         String raw = this.tokenHasherUtils.generateRawToken();
         String hash = this.tokenHasherUtils.sha256Hex(raw);
