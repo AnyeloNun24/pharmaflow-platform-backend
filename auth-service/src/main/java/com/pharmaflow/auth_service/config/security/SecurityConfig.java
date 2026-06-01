@@ -21,7 +21,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity // Habilita @PreAuthorize / @PostAuthorize en controllers y servicios
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -32,10 +32,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // API REST stateless: CSRF no aplica
+                .cors(AbstractHttpConfigurer::disable) // CORS se gestiona en el api-gateway
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Spring nunca crea HttpSession; el estado vive solo en el JWT
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST,
                                 "/auth/login",
@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 "/auth/logout",
                                 "/auth/forgot-password",
                                 "/auth/set-password").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/management/health/**", "/management/info").permitAll()
                         .requestMatchers("/management/**").authenticated()
                         .anyRequest().authenticated())
@@ -70,13 +71,13 @@ public class SecurityConfig {
     ) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
-        provider.setHideUserNotFoundExceptions(false);
+        provider.setHideUserNotFoundExceptions(false); // Permite distinguir "usuario no existe" de "contraseña incorrecta"
         return provider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(12); // Factor 12 de BCrypt: 2^12 = 4096 iteraciones; balance entre seguridad y latencia de login
     }
 
 }
