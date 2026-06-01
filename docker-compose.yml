@@ -110,6 +110,8 @@ services:
       - eureka-1
       - eureka-2
       - eureka-3
+    ports:
+      - "9001:9001" # Comentar en produccion
     env_file:
       - global.env
       - ./auth-service/auth-service-1.env
