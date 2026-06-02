@@ -7,6 +7,7 @@ import com.pharmaflow.auth_service.persistence.entity.embeddable_id.UserRoleId;
 import com.pharmaflow.auth_service.persistence.repository.AuthRoleRepository;
 import com.pharmaflow.auth_service.persistence.repository.AuthUserRepository;
 import com.pharmaflow.auth_service.persistence.repository.AuthUserRoleRepository;
+import com.pharmaflow.auth_service.messaging.event.UserCreatedEvent;
 import com.pharmaflow.auth_service.presentation.dto.request.RequestCreateUserDto;
 import com.pharmaflow.auth_service.service.exception.EmailAlreadyRegisteredException;
 import com.pharmaflow.auth_service.service.interfaces.AuditLogService;
@@ -15,6 +16,7 @@ import com.pharmaflow.auth_service.service.interfaces.UserManagementService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     private final AuthUserRoleRepository authUserRoleRepository;
     private final PasswordTokenService passwordTokenService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -72,10 +75,10 @@ public class UserManagementServiceImpl implements UserManagementService {
                 "Usuario creado por actor id=" + (createdByUserId != null ? createdByUserId : "anonimo")
                         + " con roles=" + request.roleNames());
 
-        // TODO: integrar envio de correo con el enlace https://<frontend>/set-password?token=<token>
-        //       Por ahora el token se loguea para pruebas; al productivo no debe loguearse en claro.
-        log.info("Usuario creado id={} email={} setPasswordToken={}",
-                user.getIdUser(), user.getEmail(), token);
+        this.eventPublisher.publishEvent(new UserCreatedEvent(
+                user.getIdUser(), user.getEmail(), user.getNames(), user.getSurnames(), token));
+
+        log.info("Usuario creado id={} email={}", user.getIdUser(), user.getEmail());
 
         return user;
     }

@@ -15,9 +15,11 @@ import com.pharmaflow.auth_service.service.interfaces.AuthService;
 import com.pharmaflow.auth_service.service.interfaces.FailedAttemptService;
 import com.pharmaflow.auth_service.service.interfaces.PasswordTokenService;
 import com.pharmaflow.auth_service.service.interfaces.RefreshTokenService;
+import com.pharmaflow.auth_service.messaging.event.PasswordResetRequestedEvent;
 import com.pharmaflow.auth_service.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordTokenService passwordTokenService;
     private final AuditLogService auditLogService;
     private final FailedAttemptService failedAttemptService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -117,9 +120,11 @@ public class AuthServiceImpl implements AuthService {
                     this.auditLogService.recordSuccess(
                             AuditLogService.ActionType.RESET_PASSWORD, user,
                             "Token RESET_PASSWORD emitido");
-                    log.info("forgot-password: token emitido para email={} token={}", request.email(), token);
-                    // TODO: publicar evento PasswordResetRequested al topic iam.user.events para que
-                    //       notification-service envie el correo. No loguear el token en plano en prod.
+
+                    this.eventPublisher.publishEvent(new PasswordResetRequestedEvent(
+                            user.getIdUser(), user.getEmail(), user.getNames(), token));
+
+                    log.info("forgot-password: token emitido para email={}", request.email());
                 }, () -> log.info("forgot-password: email no registrado={}", request.email()));
     }
 

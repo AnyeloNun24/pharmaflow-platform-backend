@@ -30,6 +30,14 @@ spring:
     default-schema: iam
     schemas: iam
     locations: classpath:db/migration
+  kafka:
+    # Productor de eventos de dominio (auth.user.events). Serializadores definidos en KafkaProducerConfig.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-512}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG}
 
 
 security:
