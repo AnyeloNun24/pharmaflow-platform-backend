@@ -4,3 +4,7 @@
  | |_| |  / ___ \    | |   | |___    \ V  V /    / ___ \    | |   |_____|  ___) | | |___  |  _ <    \ V /   | |___  |  _ < 
   \____| /_/   \_\   |_|   |_____|    \_/\_/    /_/   \_\   |_|           |____/  |_____| |_| \_\    \_/    |_____| |_| \_\
                                                                                                                            
+
+ :: PharmaFlow Platform  :: API Gateway ::
+ :: Spring Boot          :: ${spring-boot.version}  ::
+ :: Profile              :: ${spring.profiles.active} ::

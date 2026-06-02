@@ -6,8 +6,10 @@ import com.pharmaflow.auth_service.config.properties.SecurityPolicyProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling // habilita el sondeo del relay del Outbox (OutboxRelay)
 @EnableConfigurationProperties({
         JwtProperties.class,
         PasswordTokenProperties.class,
