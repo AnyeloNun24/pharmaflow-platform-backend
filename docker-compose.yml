@@ -85,10 +85,31 @@ services:
     volumes:
       - pharmaflow-api-gateway-logs:/app/logs/api-gateway
 
+  notification-1:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    image: notification-service:1.0.0
+    container_name: notification-1
+    hostname: notification-1
+    #ports:
+    #  - "9002:9002"
+    env_file:
+      - global.env
+      - ./notification-service/notification-1.env
+    networks:
+      - pharmaflow-net # red interna PharmaFlow (Eureka, gateway...)
+      - pharmaflow-bus # bus de eventos compartido
+    volumes:
+      - pharmaflow-notification-service-logs:/app/logs/notification-service
+
 networks:
   pharmaflow-net:
     driver: bridge
+  pharmaflow-bus:
+    external: true
 
 volumes:
   pharmaflow-discovery-service-logs:
   pharmaflow-api-gateway-logs:
+  pharmaflow-notification-service-logs:

@@ -1,0 +1,59 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:true}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:notification-service}
+      auto-offset-reset: earliest
+      # Los deserializadores (String + ErrorHandlingDeserializer/JSON) los define KafkaConsumerConfig.
+
+notification:
+  mail:
+    from: ${MAIL_FROM}
+    app-name: ${MAIL_APP_NAME:PharmaFlow}
+    frontend-base-url: ${FRONTEND_BASE_URL}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL}
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: health,info,metrics,loggers
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: INFO
+    com.netflix.eureka: INFO
+    org.springframework.kafka: INFO
+    com.pharmaflow: DEBUG

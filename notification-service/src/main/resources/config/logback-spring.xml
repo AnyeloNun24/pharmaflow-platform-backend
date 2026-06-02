@@ -1,0 +1,50 @@
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <springProperty name="APP_NAME" source="spring.application.name" defaultValue="application"/>
+    <springProperty name="PROFILE" source="spring.profiles.active" defaultValue="default"/>
+    <property name="HOSTNAME" value="${INSTANCE_HOSTNAME:-localhost}"/>
+
+    <property name="LOG_DIR" value="logs/${APP_NAME}/${HOSTNAME}"/>
+    <property name="LOG_FILE" value="${APP_NAME}__${HOSTNAME}__${PROFILE}"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>
+                %replace(%highlight([%-5level])){'\s',' '} [%d{yyyy-MM-dd HH:mm:ss.SSS}] [rid:%X{requestId:-}] [%cyan(%-36logger{36}:%line)] - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/${LOG_FILE}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%-5level] [%d{yyyy-MM-dd HH:mm:ss.SSS}] [rid:%X{requestId:-}] [%-36logger{36}:%line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.pharmaflow" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="org.springframework.cloud.netflix.eureka" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="org.springframework.kafka" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <root>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
