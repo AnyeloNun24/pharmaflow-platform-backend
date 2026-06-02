@@ -15,6 +15,7 @@
 	<modules>
 		<module>discovery-service</module>
 		<module>api-gateway</module>
+    <module>auth-service</module>
 		<module>notification-service</module>
 	</modules>
 
@@ -92,6 +93,9 @@
 					<configuration>
 						<source>${java.version}</source>
 						<target>${java.version}</target>
+						<!-- Requerido por Spring Boot 3.2+ para resolver nombres de @PathVariable/@RequestParam
+						     sin anotarlos explicitamente. Sin spring-boot-starter-parent hay que activarlo a mano. -->
+						<parameters>true</parameters>
 					</configuration>
 				</plugin>
 			</plugins>

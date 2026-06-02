@@ -1,0 +1,84 @@
+server:
+  port: ${SERVER_PORT:9001}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/pharmaflow_local}
+    username: ${SPRING_DATASOURCE_USERNAME:SkyDev}
+    password: ${SPRING_DATASOURCE_PASSWORD:SkyDev12345_}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: AuthHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-init-sql: "SET TIME ZONE '${TZ:UTC}'"
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: iam
+        format_sql: true
+        jdbc:
+          time_zone: ${TZ:UTC}
+  flyway:
+    enabled: true
+    default-schema: iam
+    schemas: iam
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:pharmaflow-auth}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:1}
+    refresh-absolute-ttl-days: ${JWT_REFRESH_ABSOLUTE_TTL_DAYS:30}
+    hmac-secret: ${JWT_HMAC_SECRET:a3f8c2d1e4b7f9a0c6d2e8f1b4a7c3d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1a4b7}
+  password-token:
+    set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES:1440}
+    reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:60}
+  policy:
+    max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS:5}
+    lockout-duration-minutes: ${SECURITY_LOCKOUT_DURATION_MINUTES:15}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME:localhost}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME:localhost}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL:http://localhost:8761/eureka}
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: INFO
+    com.netflix.eureka: INFO
+    org.springframework.security: DEBUG
+    com.pharmaflow: DEBUG
