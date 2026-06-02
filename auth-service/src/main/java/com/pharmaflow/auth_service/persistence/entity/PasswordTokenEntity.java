@@ -1,0 +1,60 @@
+package com.pharmaflow.auth_service.persistence.entity;
+
+import com.pharmaflow.auth_service.persistence.entity.type.PasswordTokenType;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.io.Serializable;
+import java.time.Instant;
+
+@Table(
+        name = "password_token",
+        schema = "iam",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk__password_token__token_hash", columnNames = "token_hash")
+        }
+)
+@Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
+public class PasswordTokenEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_password_token", nullable = false, updatable = false)
+    private Long idPasswordToken;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_user", nullable = false)
+    private AuthUserEntity user;
+
+    @Column(name = "token_hash", nullable = false, length = 64, updatable = false)
+    private String tokenHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20, updatable = false)
+    private PasswordTokenType type;
+
+    @Column(name = "used", nullable = false)
+    @Builder.Default
+    private Boolean used = false;
+
+    @Column(name = "used_at")
+    private Instant usedAt;
+
+    @Column(name = "expiry_at", nullable = false)
+    private Instant expiryAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = Instant.now();
+        }
+    }
+}

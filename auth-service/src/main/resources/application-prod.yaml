@@ -1,0 +1,96 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: AuthHikariPool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:30000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      connection-init-sql: "SET TIME ZONE '${TZ:UTC}'"
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: iam
+        format_sql: false
+        jdbc:
+          time_zone: ${TZ:UTC}
+  flyway:
+    enabled: true
+    default-schema: iam
+    schemas: iam
+    locations: classpath:db/migration
+  kafka:
+    # Productor de eventos de dominio (auth.user.events). Serializadores definidos en KafkaProducerConfig.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-512}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG}
+
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS}
+    refresh-absolute-ttl-days: ${JWT_REFRESH_ABSOLUTE_TTL_DAYS}
+    hmac-secret: ${JWT_HMAC_SECRET}
+  password-token:
+    set-ttl-minutes: ${PASSWORD_SET_TOKEN_TTL_MINUTES}
+    reset-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES}
+  policy:
+    max-failed-attempts: ${SECURITY_MAX_FAILED_ATTEMPTS}
+    lockout-duration-minutes: ${SECURITY_LOCKOUT_DURATION_MINUTES}
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}(${INSTANCE_HOSTNAME}):${server.port}
+    hostname: ${INSTANCE_HOSTNAME}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE_GLOBAL}
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:9001}
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+  info:
+    env:
+      enabled: false
+    build:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.netflix.eureka: WARN
+    com.netflix.eureka: WARN
+    org.springframework.security: WARN
+    com.pharmaflow: INFO

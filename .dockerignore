@@ -1,0 +1,63 @@
+#modulo NO seria leido por el builder.
+ ##
+ ## Aqui se excluye del build context todo lo que no se necesita para compilar ni ejecutar.
+ #
+ ## --- Artefactos de build (se recompilan dentro de la imagen) --- .dockerignore (raiz del repo) — PharmaFlow
+#
+# docker-compose construye las 3 imagenes (discovery-service, api-gateway, auth-service)
+# con "context: ." (la raiz del repo) y cada Dockerfile hace "COPY . ." + build
+# multi-stage que compila con Maven DENTRO de la imagen.
+#
+# Con "context: .", el UNICO .dockerignore que Docker lee es ESTE (el de la raiz del
+# context). Un .dockerignore dentro de cada
+target/
+**/target/
+*.class
+*.jar
+*.war
+
+# --- Control de versiones ---
+.git/
+.gitignore
+.gitattributes
+
+# --- IDE / editores ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+*.swp
+*~
+
+# --- Docker (no hace falta meterlos en el context) ---
+Dockerfile
+**/Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# --- Entornos y secretos (se inyectan en runtime via env_file, no en el build) ---
+.env
+*.env
+**/*.env
+
+# --- Logs y temporales ---
+logs/
+**/logs/
+*.log
+tmp/
+temp/
+
+# --- Documentacion y licencia ---
+*.md
+**/*.md
+LICENSE
+docs/
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
