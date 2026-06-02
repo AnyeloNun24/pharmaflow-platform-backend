@@ -15,7 +15,8 @@
 	<modules>
 		<module>discovery-service</module>
 		<module>api-gateway</module>
-		<module>auth-service</module>
+    <module>auth-service</module>
+		<module>notification-service</module>
 	</modules>
 
 	<url>https://github.com/AnyeloNun24/pharmaflow-platform-backend</url>
