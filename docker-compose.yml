@@ -8,8 +8,8 @@ services:
     container_name: eureka-1
     hostname: eureka-1
     restart: unless-stopped
-    ports:
-      - "8761:8761"
+    #ports:
+    #  - "8761:8761"
     env_file:
       - global.env
       - ./discovery-service/discovery-service-1.env
@@ -139,15 +139,10 @@ services:
       - pharmaflow-net
       - pharmaflow-bus # bus de eventos compartido
     volumes:
-      - pharmaflow-notification-service-logs:/app/logs/notification-service
+      - /app/logs/notification-service:/app/logs/notification-service
 
 networks:
   pharmaflow-net:
     driver: bridge
   pharmaflow-bus:
     external: true
-
-volumes:
-  pharmaflow-discovery-service-logs:
-  pharmaflow-api-gateway-logs:
-  pharmaflow-notification-service-logs:

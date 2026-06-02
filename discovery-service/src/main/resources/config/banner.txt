@@ -4,3 +4,7 @@
  | |___  | |_| | |  _ <  | |___  | . \   / ___ \  |_____|  ___) | | |___  |  _ <    \ V /   | |___  |  _ < 
  |_____|  \___/  |_| \_\ |_____| |_|\_\ /_/   \_\         |____/  |_____| |_| \_\    \_/    |_____| |_| \_\
                                                                                                            
+
+ :: PharmaFlow Platform  :: Discovery Service ::
+ :: Spring Boot          :: ${spring-boot.version}  ::
+ :: Profile              :: ${spring.profiles.active} ::
